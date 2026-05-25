@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0D0B08" id="themeMeta">
+<title>Sanctum — Scripture for Every Mind</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D0B08;--bg2:#161209;--bg3:#1E1810;--bg4:#261F14;
+  --card:#1C1710;--ov:rgba(13,11,8,0.95);
+  --a2:#C4922A;--a3:#E8B84B;--a4:#F5D07A;
+  --t1:#F2EAD8;--t2:#C8B888;--t3:#8B7A50;--t4:#4A3F28;
+  --b1:rgba(200,160,60,0.10);--b2:rgba(200,160,60,0.22);--b3:rgba(200,160,60,0.42);
+  --r1:8px;--r2:14px;--r3:20px;--r4:28px;
+  --sf:'Cormorant Garamond',Georgia,serif;
+  --ss:'DM Sans',system-ui,sans-serif;
+  --sp:cubic-bezier(0.34,1.56,0.64,1);
+}
+[data-theme="light"]{
+  --bg:#FAF6EE;--bg2:#F5EFE3;--bg3:#EDE5D4;--bg4:#E4D9C4;
+  --card:#FFFFFF;--ov:rgba(250,246,238,0.95);
+  --a2:#9B6E18;--a3:#7A5210;--a4:#5C3C08;
+  --t1:#1C1408;--t2:#5C4830;--t3:#9C8458;--t4:#C8B090;
+  --b1:rgba(100,70,20,0.08);--b2:rgba(100,70,20,0.18);--b3:rgba(100,70,20,0.38);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--ss);background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none;-webkit-tap-highlight-color:transparent}
+input,textarea{font-family:inherit;color:var(--t1)}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+
+/* ── SHELL: flex column, fixed height, tab bar always visible ── */
+#app{display:flex;flex-direction:column;height:100dvh;max-width:520px;margin:0 auto;background:var(--bg);overflow:hidden}
+#hdr{flex-shrink:0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:var(--ov);backdrop-filter:blur(20px);border-bottom:1px solid var(--b1);z-index:10}
+#scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+#tabs{flex-shrink:0;display:flex;height:62px;background:var(--ov);backdrop-filter:blur(20px);border-top:1px solid var(--b1);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+/* ── HEADER ── */
+.logo{font-family:var(--sf);font-size:1.4rem;font-weight:500;color:var(--a3);display:flex;align-items:center;gap:8px}
+.cross{position:relative;width:14px;height:18px;flex-shrink:0}
+.cross::before,.cross::after{content:'';position:absolute;background:var(--a3);border-radius:1px}
+.cross::before{width:2px;height:18px;left:6px;top:0}
+.cross::after{width:14px;height:2px;left:0;top:6px}
+.hbtns{display:flex;gap:5px}
+.ibtn{width:35px;height:35px;border-radius:50%;border:1px solid var(--b1);color:var(--t3);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s}
+.ibtn:hover,.ibtn.on{background:var(--bg3);color:var(--a3);border-color:var(--b2)}
+
+/* ── TABS ── */
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--t4);transition:color .2s;position:relative;padding-top:4px}
+.tab.on{color:var(--a3)}
+.tab-ic{font-size:18px;line-height:1;transition:transform .25s var(--sp)}
+.tab.on .tab-ic{transform:translateY(-2px) scale(1.12)}
+.tab-lb{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;opacity:.8}
+.tab-dot{position:absolute;top:5px;width:4px;height:4px;border-radius:2px;background:var(--a3);transform:scaleX(0);opacity:0;transition:all .25s var(--sp)}
+.tab.on .tab-dot{transform:scaleX(1);opacity:1}
+
+/* ── SCREENS ── */
+.scr{display:none;padding-bottom:16px;animation:fu .28s ease both}
+.scr.on{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--b1);border-radius:var(--r4);transition:border-color .2s,transform .2s,box-shadow .2s}
+.card:hover{border-color:var(--b2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.chip{display:inline-flex;align-items:center;gap:4px;background:rgba(232,184,75,.10);border:1px solid rgba(232,184,75,.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--a4)}
+.shdr{display:flex;align-items:baseline;justify-content:space-between;padding:14px 14px 9px}
+.stitle{font-family:var(--sf);font-size:1.18rem;font-weight:500}
+.slink{font-size:12px;font-weight:500;color:var(--a3);opacity:.8;transition:opacity .15s}
+.slink:hover{opacity:1}
+.btnpri{padding:13px;background:linear-gradient(135deg,var(--a2),var(--a3));color:#0D0B08;font-weight:600;font-size:.875rem;border-radius:var(--r2);display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.03em;transition:all .2s}
+.btnpri:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(196,146,42,.35);filter:brightness(1.05)}
+.pill{padding:5px 13px;border-radius:20px;border:1px solid var(--b2);background:var(--card);color:var(--t3);font-size:11px;font-weight:600;transition:all .2s var(--sp);flex-shrink:0}
+.pill.on{background:var(--a2);color:#0D0B08;border-color:transparent;transform:scale(1.05)}
+.hscroll{display:flex;gap:6px;overflow-x:auto;padding:0 14px 4px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.pbar-wrap{background:var(--bg3);border-radius:4px;height:3px;margin-bottom:14px;overflow:hidden}
+.pbar{height:100%;background:linear-gradient(90deg,var(--a2),var(--a4));border-radius:4px;transition:width 1s ease}
+
+/* ── HOME ── */
+.votd{margin:12px 12px 0;background:var(--card);border:1px solid var(--b2);border-radius:var(--r4);padding:24px 22px 20px;position:relative;overflow:hidden;box-shadow:0 0 40px rgba(232,184,75,.1),0 4px 24px rgba(0,0,0,.5)}
+.votd::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 75% 20%,rgba(232,184,75,.09) 0%,transparent 60%);pointer-events:none}
+.votd::after{content:'✝';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:70px;color:var(--a3);opacity:.04;font-family:serif;pointer-events:none;user-select:none}
+.votd-text{font-family:var(--sf);font-size:1.5rem;line-height:1.48;font-style:italic;color:var(--t1);margin:12px 0 9px}
+.votd-ref{font-size:.72rem;font-weight:700;color:var(--a3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:16px}
+.votd-acts{display:flex;gap:6px;flex-wrap:wrap}
+.vbtn{display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;border:1px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:12px;font-weight:500;transition:all .2s}
+.vbtn:hover{border-color:var(--a2);color:var(--a3)}
+.srow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 12px 0}
+.stat{background:var(--card);border:1px solid var(--b1);border-radius:var(--r3);padding:14px 8px 12px;text-align:center;transition:all .2s}
+.stat:hover{border-color:var(--b2);transform:translateY(-2px)}
+.sval{font-family:var(--sf);font-size:1.9rem;font-weight:600;color:var(--a3);line-height:1;margin-bottom:4px}
+.slbl{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t4)}
+.tcard{margin:12px 12px 0;background:var(--card);border:1px solid var(--b1);border-radius:var(--r4);overflow:hidden;transition:all .25s}
+.tcard:hover{border-color:var(--b2);box-shadow:0 8px 28px rgba(0,0,0,.4)}
+.tcinner{padding:18px}
+.tmeta{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ttitle{font-family:var(--sf);font-size:1.3rem;font-weight:500;margin-bottom:5px}
+.tsub{font-size:12px;color:var(--t3);margin-bottom:14px;line-height:1.5}
+.qgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:0 12px}
+.qcard{background:var(--card);border:1px solid var(--b1);border-radius:var(--r3);padding:15px 13px;display:flex;flex-direction:column;gap:6px;text-align:left;color:var(--t1);transition:all .2s}
+.qcard:hover{border-color:var(--b2);transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.qic{font-size:19px;line-height:1}
+.qttl{font-size:.84rem;font-weight:600}
+.qsub{font-size:11px;color:var(--t3)}
+.bites{padding:0 12px;display:flex;flex-direction:column;gap:6px}
+.bite{background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);padding:12px 14px;display:flex;align-items:center;gap:12px;transition:all .2s;text-align:left;color:var(--t1)}
+.bite:hover{border-color:var(--b2);transform:translateX(3px)}
+.bnum{width:28px;height:28px;border-radius:50%;flex-shrink:0;background:var(--bg3);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;font-family:var(--sf);font-size:.82rem;color:var(--a3);font-weight:600}
+.bref{font-family:var(--sf);font-size:.92rem;font-weight:500}
+.btime{font-size:10px;color:var(--t3)}
+.barr{margin-left:auto;color:var(--t3);font-size:13px;flex-shrink:0}
+
+/* ── READER ── */
+.rctrl{position:sticky;top:0;z-index:10;background:var(--ov);backdrop-filter:blur(16px);border-bottom:1px solid var(--b1);padding:9px 12px;display:flex;align-items:center;gap:7px}
+.bsel{flex:1;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r2);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;font-family:var(--sf);font-size:.92rem;color:var(--t1);transition:border-color .2s}
+.bsel:hover{border-color:var(--a2)}
+.cnav{display:flex;align-items:center;gap:2px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r2);padding:3px}
+.cn{width:29px;height:29px;border-radius:7px;color:var(--t2);font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cn:hover{background:var(--bg4);color:var(--a3)}
+.cnum{font-family:var(--sf);font-size:.88rem;min-width:34px;text-align:center;color:var(--t1);font-weight:500}
+.aabtn{background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r1);padding:7px 9px;color:var(--t2);font-size:12px;font-weight:600;transition:all .2s}
+.aabtn:hover{border-color:var(--a2);color:var(--a3)}
+.scripture{padding:22px 18px 36px}
+.chtitle{font-family:var(--sf);font-size:1.9rem;font-weight:400;color:var(--t1);margin-bottom:4px}
+.chsub{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--a3);margin-bottom:26px;display:flex;align-items:center;gap:8px}
+.chsub::after{content:'';flex:1;height:1px;background:var(--b1)}
+.verse{display:flex;gap:9px;padding:6px 3px;border-radius:var(--r1);cursor:pointer;transition:background .15s;margin-bottom:1px}
+.verse:hover{background:rgba(232,184,75,.06)}
+.verse.hl{background:rgba(232,184,75,.09);border-left:2px solid var(--a2);padding-left:9px}
+.vnum{font-size:.62rem;font-weight:500;color:var(--t4);line-height:2;min-width:18px;flex-shrink:0;user-select:none;font-variant-numeric:tabular-nums}
+.vtxt{font-family:var(--sf);font-size:1.1rem;line-height:1.78;color:var(--t1);font-weight:300;letter-spacing:.01em;flex:1}
+.adhd-mode .vtxt{font-size:1.16rem;line-height:2.05}
+.adhd-mode .verse{margin-bottom:7px;padding:9px 5px;border-bottom:1px solid var(--b1)}
+.bloader{text-align:center;padding:56px 20px}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--b2);border-top-color:var(--a3);animation:sp .8s linear infinite;margin:0 auto 14px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.berr{text-align:center;padding:40px 20px}
+.navbtns{display:flex;gap:9px;margin-top:28px;padding-top:18px;border-top:1px solid var(--b1)}
+.navbtn{flex:1;padding:11px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r2);color:var(--t2);font-size:13px;transition:all .2s}
+.navbtn:hover{border-color:var(--a2);color:var(--a3)}
+
+/* ── VERSE POPUP ── */
+#vpop{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(130%);width:calc(100% - 24px);max-width:520px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r4);padding:15px;z-index:100;box-shadow:0 -4px 40px rgba(0,0,0,.6);transition:transform .3s var(--sp)}
+#vpop.show{transform:translateX(-50%) translateY(0)}
+.vpref{font-family:var(--sf);font-size:.86rem;font-weight:500;color:var(--a4);margin-bottom:11px;letter-spacing:.04em}
+.vpacts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.vpa{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 5px;border-radius:var(--r2);background:var(--bg4);border:1px solid var(--b1);color:var(--t2);font-size:17px;transition:all .2s var(--sp)}
+.vpa:hover{background:var(--card);border-color:var(--a2);color:var(--a3);transform:translateY(-3px)}
+.vpal{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);font-family:var(--ss)}
+.hlrow{display:flex;gap:7px;margin-top:11px;padding-top:11px;border-top:1px solid var(--b1);justify-content:center}
+.hlc{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .2s var(--sp)}
+.hlc:hover{transform:scale(1.2)}
+.hlc.on{border-color:var(--t1);transform:scale(1.15)}
+
+/* ── LIBRARY ── */
+.tstlbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--a3);padding:13px 14px 7px;display:flex;align-items:center;gap:9px}
+.tstlbl::after{content:'';flex:1;height:1px;background:var(--b1)}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 12px 6px}
+.btile{background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);padding:12px 7px 10px;text-align:center;transition:all .2s}
+.btile:hover{border-color:var(--a2);background:var(--bg3);transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.babbr{font-family:var(--sf);font-size:.92rem;font-weight:500;color:var(--a3);margin-bottom:2px}
+.bname{font-size:9px;color:var(--t3);line-height:1.3}
+.sinp{position:relative;padding:11px 12px 7px}
+.sinp input{width:100%;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r2);padding:9px 13px 9px 36px;color:var(--t1);font-size:.88rem;outline:none;transition:border-color .2s}
+.sinp input:focus{border-color:var(--a2)}
+.sic{position:absolute;left:24px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:13px;pointer-events:none}
+
+/* ── JOURNAL ── */
+.jnew{margin:12px;width:calc(100% - 24px);padding:14px 16px;background:var(--card);border:1px dashed var(--b2);border-radius:var(--r4);color:var(--t3);font-family:var(--sf);font-size:.97rem;display:flex;align-items:center;gap:9px;text-align:left;transition:all .2s}
+.jnew:hover{border-color:var(--a2);color:var(--a3);background:var(--bg3)}
+.jfrow{display:flex;gap:5px;padding:0 12px 10px;overflow-x:auto;scrollbar-width:none}
+.jfrow::-webkit-scrollbar{display:none}
+.jfil{flex-shrink:0;padding:5px 11px;border-radius:16px;border:1px solid var(--b1);background:transparent;color:var(--t3);font-size:11px;font-weight:600;transition:all .2s}
+.jfil.on{background:var(--bg3);border-color:var(--b2);color:var(--t1)}
+.jlist{padding:0 12px;display:flex;flex-direction:column;gap:8px}
+.jcard{background:var(--card);border:1px solid var(--b1);border-radius:var(--r3);padding:15px;transition:all .2s}
+.jcard:hover{border-color:var(--b2)}
+.jch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.jbadge{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--a4);background:rgba(232,184,75,.10);border:1px solid rgba(232,184,75,.18);padding:2px 8px;border-radius:8px}
+.jdate{font-size:10px;color:var(--t3)}
+.jverse{font-family:var(--sf);font-size:.9rem;font-style:italic;color:var(--t2);margin-bottom:6px;line-height:1.5}
+.jbody{font-size:.84rem;color:var(--t2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ── JOURNAL EDITOR ── */
+#jed{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;transform:translateY(100%);transition:transform .32s ease}
+#jed.open{transform:translateY(0)}
+.jedh{display:flex;align-items:center;gap:11px;padding:13px 14px;border-bottom:1px solid var(--b1);background:var(--ov);backdrop-filter:blur(16px);flex-shrink:0}
+.jedc{width:33px;height:33px;border-radius:50%;border:1px solid var(--b1);color:var(--t2);font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.jedc:hover{border-color:var(--b2);color:var(--t1)}
+.jedt{flex:1;background:transparent;border:none;outline:none;font-family:var(--sf);font-size:1.12rem;color:var(--t1)}
+.jeds{padding:7px 15px;background:var(--a2);color:#0D0B08;border-radius:var(--r1);font-weight:600;font-size:13px;transition:filter .2s}
+.jeds:hover{filter:brightness(1.1)}
+.jedtp{display:flex;gap:5px;padding:10px 12px;overflow-x:auto;border-bottom:1px solid var(--b1);scrollbar-width:none;flex-shrink:0}
+.jedtp::-webkit-scrollbar{display:none}
+.typil{flex-shrink:0;padding:5px 12px;border-radius:16px;border:1px solid var(--b1);background:transparent;color:var(--t3);font-size:11px;font-weight:600;transition:all .2s var(--sp)}
+.typil.on{background:rgba(232,184,75,.12);border-color:var(--a2);color:var(--a4)}
+.jedv{margin:9px 12px 0;padding:8px 12px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r1);font-size:.9rem;outline:none;transition:border-color .2s;flex-shrink:0}
+.jedv:focus{border-color:var(--a2)}
+.jedbody{flex:1;padding:9px 12px 0;overflow-y:auto}
+.jedta{width:100%;height:100%;background:transparent;border:none;outline:none;font-size:.97rem;line-height:1.85;color:var(--t1);resize:none;caret-color:var(--a3)}
+
+/* ── PROGRESS ── */
+.shero{margin:12px;background:var(--card);border:1px solid var(--b2);border-radius:var(--r4);padding:24px 18px;text-align:center;position:relative;overflow:hidden;box-shadow:0 0 40px rgba(232,184,75,.1),0 4px 24px rgba(0,0,0,.45)}
+.shero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(232,184,75,.1) 0%,transparent 65%);pointer-events:none}
+.flame{font-size:3rem;line-height:1;margin-bottom:5px;filter:drop-shadow(0 0 12px rgba(255,160,0,.4));animation:fp 2.2s ease-in-out infinite}
+@keyframes fp{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.snum{font-family:var(--sf);font-size:3.6rem;font-weight:600;color:var(--a3);line-height:1;margin-bottom:3px}
+.slb{font-size:13px;color:var(--t3)}
+.hmap{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:0 12px 12px}
+.hd{aspect-ratio:1;border-radius:4px;background:var(--bg3);border:1px solid var(--b1)}
+.hd.r1{background:rgba(232,184,75,.2);border-color:rgba(232,184,75,.3)}
+.hd.r2{background:rgba(232,184,75,.45);border-color:rgba(232,184,75,.5)}
+.hd.r3{background:rgba(232,184,75,.75);border-color:var(--a2)}
+.hd.td{border:2px solid var(--a3)}
+.plcard{margin:0 12px 8px;background:var(--card);border:1px solid var(--b1);border-radius:var(--r3);padding:15px;transition:border-color .2s}
+.plcard:hover{border-color:var(--b2)}
+.plname{font-family:var(--sf);font-size:.98rem;font-weight:500;margin-bottom:4px}
+.plmeta{font-size:11px;color:var(--t3);margin-bottom:9px;display:flex;justify-content:space-between}
+.plmeta span{color:var(--a3);font-weight:600}
+
+/* ── TIMER ── */
+.timerscr{display:flex;flex-direction:column;align-items:center;padding:28px 18px 16px}
+.rw{position:relative;width:190px;height:190px;margin-bottom:24px}
+.rsvg{width:100%;height:100%;transform:rotate(-90deg)}
+.rtrack{fill:none;stroke:var(--bg3);stroke-width:9}
+.rprog{fill:none;stroke:url(#rg);stroke-width:9;stroke-linecap:round;stroke-dasharray:534;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear}
+.rinner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.rtime{font-family:var(--sf);font-size:2.7rem;font-weight:400;color:var(--t1);line-height:1}
+.rphase{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--a3)}
+.prow{display:flex;gap:7px;margin-bottom:22px}
+.pre{padding:5px 15px;border-radius:20px;border:1px solid var(--b2);background:var(--card);color:var(--t2);font-size:13px;font-weight:500;transition:all .2s var(--sp)}
+.pre.on{background:var(--a2);color:#0D0B08;border-color:transparent;transform:scale(1.05)}
+.tbtns{display:flex;gap:13px;align-items:center;margin-bottom:24px}
+.tplay{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--a2),var(--a3));color:#0D0B08;font-size:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(196,146,42,.4);transition:all .2s var(--sp)}
+.tplay:hover{transform:scale(1.08);box-shadow:0 8px 28px rgba(196,146,42,.5)}
+.tsec{width:40px;height:40px;border-radius:50%;background:var(--card);border:1px solid var(--b2);color:var(--t2);font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.tsec:hover{border-color:var(--a2);color:var(--a3)}
+.tipc{width:100%;background:var(--card);border:1px solid var(--b1);border-radius:var(--r3);padding:15px;margin-bottom:9px}
+.tipttl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--a3);margin-bottom:10px}
+.tipb{font-size:.86rem;color:var(--t2);line-height:1.9}
+.tipb strong{color:var(--t1)}
+
+/* ── AI ── */
+.aiwrap{padding:12px}
+.aibox{background:var(--card);border:1px solid var(--b2);border-radius:var(--r4);overflow:hidden}
+.aihdr{padding:16px 18px;border-bottom:1px solid var(--b1)}
+.aititle{font-family:var(--sf);font-size:1.22rem;font-weight:500;margin-bottom:3px}
+.aisub{font-size:12px;color:var(--t3)}
+.aikey{padding:13px 15px;border-bottom:1px solid var(--b1);background:var(--bg3)}
+.aikeylbl{font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px}
+.aikeynote{font-size:11px;color:var(--t3);margin-bottom:8px;line-height:1.6}
+.aikeynote a{color:var(--a3)}
+.aikrow{display:flex;gap:6px}
+.aikinp{flex:1;background:var(--card);border:1px solid var(--b2);border-radius:var(--r1);padding:8px 10px;font-size:12px;outline:none;transition:border-color .2s;font-family:monospace;color:var(--t1)}
+.aikinp:focus{border-color:var(--a2)}
+.aiksave{padding:8px 13px;background:var(--a2);color:#0D0B08;border-radius:var(--r1);font-weight:600;font-size:12px;transition:filter .2s}
+.aiksave:hover{filter:brightness(1.1)}
+.aimsgs{height:290px;overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:8px}
+.aibot{background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r3);padding:11px 13px;font-family:var(--sf);font-size:.92rem;color:var(--t2);line-height:1.72;max-width:92%}
+.aiuser{align-self:flex-end;background:var(--a2);color:#0D0B08;border-radius:var(--r3) var(--r3) 4px var(--r3);padding:9px 13px;font-size:.86rem;line-height:1.5;max-width:80%}
+.aiirow{display:flex;gap:6px;padding:10px 13px;border-top:1px solid var(--b1)}
+.aiinp{flex:1;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r2);padding:9px 12px;font-size:.88rem;outline:none;transition:border-color .2s;color:var(--t1)}
+.aiinp:focus{border-color:var(--a2)}
+.aisend{padding:9px 15px;background:var(--a2);color:#0D0B08;border-radius:var(--r2);font-weight:600;font-size:13px;transition:filter .2s;flex-shrink:0}
+.aisend:hover{filter:brightness(1.1)}
+.aiprpts{display:flex;flex-wrap:wrap;gap:5px;padding:0 13px 13px}
+.aiprpt{padding:5px 10px;border-radius:16px;border:1px solid var(--b1);background:transparent;color:var(--t3);font-size:11px;transition:all .2s}
+.aiprpt:hover{border-color:var(--b2);color:var(--t2)}
+
+/* ── RESOURCES / LINKS ── */
+.rcard{display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);margin-bottom:6px;text-decoration:none;transition:all .2s}
+.rcard:hover{border-color:var(--b2);transform:translateY(-1px)}
+.ric{font-size:21px;flex-shrink:0}
+.rname{font-size:.84rem;font-weight:600;color:var(--t1);margin-bottom:2px}
+.rsub{font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rarr{font-size:12px;color:var(--a3);margin-left:auto;flex-shrink:0}
+
+/* ── BOOKMARKS ── */
+.bkcard{background:var(--card);border:1px solid var(--b1);border-radius:var(--r3);padding:14px;margin-bottom:7px;transition:all .2s}
+.bkcard:hover{border-color:var(--b2)}
+.bkref{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--a3);margin-bottom:6px}
+.bktxt{font-family:var(--sf);font-size:.95rem;color:var(--t2);line-height:1.6}
+.bkdt{font-size:10px;color:var(--t4);margin-top:6px}
+
+/* ── SETTINGS ── */
+#sett{position:fixed;inset:0;z-index:250;background:var(--bg);transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column}
+#sett.open{transform:translateX(0)}
+.seth{display:flex;align-items:center;gap:11px;padding:13px 14px;border-bottom:1px solid var(--b1);flex-shrink:0;background:var(--ov);backdrop-filter:blur(16px)}
+.settitle{font-family:var(--sf);font-size:1.18rem;font-weight:500}
+.setb{flex:1;overflow-y:auto;padding:14px}
+.setrow{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--b1)}
+.setlbl{font-size:.88rem;color:var(--t1)}
+.setval{font-size:.84rem;color:var(--a3);font-weight:500}
+.tog{width:42px;height:25px;border-radius:13px;background:var(--bg3);border:1px solid var(--b2);position:relative;cursor:pointer;transition:background .2s,border-color .2s}
+.tog.on{background:var(--a2);border-color:var(--a2)}
+.tog::after{content:'';position:absolute;width:19px;height:19px;background:white;border-radius:50%;top:2px;left:2px;transition:transform .2s var(--sp);box-shadow:0 2px 5px rgba(0,0,0,.3)}
+.tog.on::after{transform:translateX(17px)}
+.fctr{display:flex;align-items:center;gap:9px}
+.fbtn{width:30px;height:30px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--t1);font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.fbtn:hover{border-color:var(--a2);color:var(--a3)}
+.fval{font-family:var(--sf);font-size:.97rem;min-width:30px;text-align:center;color:var(--a3)}
+
+/* ── ONBOARDING ── */
+#ob{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 30px;text-align:center;transition:opacity .5s,transform .5s}
+#ob.gone{opacity:0;transform:scale(1.04);pointer-events:none}
+.obcross{font-size:2.8rem;margin-bottom:20px;filter:drop-shadow(0 0 20px rgba(232,184,75,.5));animation:cg 3s ease-in-out infinite}
+@keyframes cg{0%,100%{filter:drop-shadow(0 0 20px rgba(232,184,75,.5))}50%{filter:drop-shadow(0 0 40px rgba(232,184,75,.9))}}
+.obtitle{font-family:var(--sf);font-size:2.7rem;font-weight:400;color:var(--t1);margin-bottom:11px}
+.obsub{font-size:1rem;color:var(--t2);line-height:1.7;margin-bottom:36px;max-width:290px;font-weight:300}
+.obbtn{padding:14px 36px;background:linear-gradient(135deg,var(--a2),var(--a3));color:#0D0B08;border-radius:var(--r4);font-weight:600;font-size:.97rem;letter-spacing:.04em;box-shadow:0 8px 32px rgba(196,146,42,.4);transition:all .3s var(--sp)}
+.obbtn:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 16px 40px rgba(196,146,42,.5)}
+.obskip{margin-top:14px;font-size:12px;color:var(--t3);transition:color .2s}
+.obskip:hover{color:var(--t2)}
+
+/* ── MORE MENU ── */
+#more{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:520px;background:var(--bg2);border:1px solid var(--b2);border-top-left-radius:var(--r4);border-top-right-radius:var(--r4);z-index:150;padding:11px 12px 18px;transition:transform .32s var(--sp);box-shadow:0 -8px 40px rgba(0,0,0,.6)}
+#more.show{transform:translateX(-50%) translateY(0)}
+#moreov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:149;opacity:0;pointer-events:none;transition:opacity .3s}
+#moreov.show{opacity:1;pointer-events:auto}
+.moregrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px}
+.mtile{background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);padding:13px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--t1);transition:all .2s}
+.mtile:hover{border-color:var(--b2)}
+.mtic{font-size:1.3rem}
+.mtlb{font-size:11px;font-weight:600}
+
+/* ── TOAST ── */
+#toasts{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:calc(100vw - 32px);max-width:480px}
+.toast{background:var(--bg4);border:1px solid var(--b2);border-radius:24px;padding:8px 17px;font-size:13px;font-weight:500;color:var(--t1);box-shadow:0 4px 20px rgba(0,0,0,.5);animation:ti .3s var(--sp) both,to .3s ease 2.2s both;white-space:nowrap}
+@keyframes ti{from{opacity:0;transform:translateY(8px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes to{from{opacity:1}to{opacity:0;transform:translateY(-6px)}}
+
+/* ── DATA ── */
+.dbtn{display:flex;align-items:center;gap:11px;padding:13px 14px;background:var(--card);border:1px solid var(--b1);border-radius:var(--r3);margin-bottom:8px;color:var(--t1);text-align:left;transition:border-color .2s;width:100%}
+.dbtn:hover{border-color:var(--b2)}
+.dbic{font-size:19px;flex-shrink:0}
+.dbttl{font-weight:600;font-size:.88rem;margin-bottom:1px}
+.dbsub{font-size:11px;color:var(--t3)}
+.ddanger{border-color:rgba(200,60,60,.25);color:#E88080}
+.ddanger:hover{border-color:rgba(200,60,60,.5)}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:44px 22px;color:var(--t3)}
+.empic{font-size:2.1rem;margin-bottom:11px;opacity:.5}
+.emptitle{font-family:var(--sf);font-size:1.02rem;color:var(--t2);margin-bottom:5px}
+.empsub{font-size:13px;line-height:1.6}
+
+@media(min-width:540px){.bgrid{grid-template-columns:repeat(4,1fr)}.qgrid{grid-template-columns:repeat(3,1fr)}.srow{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+
+<div id="ob">
+  <div class="obcross">✝</div>
+  <h1 class="obtitle">Sanctum</h1>
+  <p class="obsub">A sacred space for Scripture. Beautifully crafted for every mind — especially yours.</p>
+  <button class="obbtn" onclick="enterApp()">Open Your Bible →</button>
+  <button class="obskip" onclick="enterApp()">I've been here before</button>
+</div>
+
+<div id="app">
+  <header id="hdr">
+    <div class="logo"><div class="cross"></div>Sanctum</div>
+    <div class="hbtns">
+      <button class="ibtn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+      <button class="ibtn" id="adhdBtn" onclick="toggleADHD()">⚡</button>
+      <button class="ibtn" onclick="openSett()">⚙️</button>
+    </div>
+  </header>
+
+  <div id="scroll">
+
+    <!-- HOME -->
+    <div class="scr on" id="s-home">
+      <div class="votd">
+        <div class="chip">✦ Verse of the Day</div>
+        <div class="votd-text" id="votdTxt">"For I know the plans I have for you," declares the Lord, "plans to prosper you and not to harm you, plans to give you hope and a future."</div>
+        <div class="votd-ref" id="votdRef">JEREMIAH 29:11 · NASB</div>
+        <div class="votd-acts">
+          <button class="vbtn" onclick="listenVOTD()">🔊 Listen</button>
+          <button class="vbtn" onclick="bookmarkVOTD()">🔖 Save</button>
+          <button class="vbtn" onclick="shareVOTD()">📤 Share</button>
+          <button class="vbtn" onclick="go('ai')">✨ Study</button>
+        </div>
+      </div>
+      <div class="srow">
+        <div class="stat"><div class="sval" id="hStrk">7🔥</div><div class="slbl">Streak</div></div>
+        <div class="stat"><div class="sval" id="hCh">23</div><div class="slbl">Chapters</div></div>
+        <div class="stat"><div class="sval" id="hBk">0</div><div class="slbl">Saved</div></div>
+      </div>
+      <div class="shdr"><span class="stitle">Today's Passage</span><button class="slink" onclick="go('plans')">All Plans</button></div>
+      <div class="tcard">
+        <div class="tcinner">
+          <div class="tmeta"><span class="chip">📅 Day 48 of 365</span><span style="font-size:11px;color:var(--t3)">~3 min</span></div>
+          <div class="ttitle">Psalm 23</div>
+          <div class="tsub">The Lord Is My Shepherd — one of the most beloved passages in all of Scripture.</div>
+          <div class="pbar-wrap"><div class="pbar" style="width:13%"></div></div>
+          <button class="btnpri" style="width:100%" onclick="openPassage('Psalms',23)">Open in Reader →</button>
+        </div>
+      </div>
+      <div class="shdr"><span class="stitle">Quick Access</span></div>
+      <div class="qgrid">
+        <button class="qcard" onclick="go('library')"><div class="qic">📚</div><div class="qttl">Bible Library</div><div class="qsub">All 66 books</div></button>
+        <button class="qcard" onclick="go('journal')"><div class="qic">🙏</div><div class="qttl">Prayer Journal</div><div class="qsub">Pray & reflect</div></button>
+        <button class="qcard" onclick="go('timer')"><div class="qic">⏱️</div><div class="qttl">Focus Timer</div><div class="qsub">Pomodoro study</div></button>
+        <button class="qcard" onclick="go('ai')"><div class="qic">✨</div><div class="qttl">AI Companion</div><div class="qsub">Ask anything</div></button>
+        <button class="qcard" onclick="go('resources')"><div class="qic">🌐</div><div class="qttl">Resources</div><div class="qsub">Maps, lexicons</div></button>
+        <button class="qcard" onclick="go('progress')"><div class="qic">📊</div><div class="qttl">Progress</div><div class="qsub">Streak & stats</div></button>
+      </div>
+      <div class="shdr"><span class="stitle">Bite-Sized Today</span></div>
+      <div class="bites">
+        <button class="bite" onclick="openPassage('Psalms',1)"><div class="bnum">①</div><div><div class="bref">Psalm 1</div><div class="btime">2 min</div></div><div class="barr">›</div></button>
+        <button class="bite" onclick="openPassage('Proverbs',3)"><div class="bnum">②</div><div><div class="bref">Proverbs 3:1–12</div><div class="btime">3 min</div></div><div class="barr">›</div></button>
+        <button class="bite" onclick="openPassage('John',15)"><div class="bnum">③</div><div><div class="bref">John 15:1–11</div><div class="btime">4 min</div></div><div class="barr">›</div></button>
+      </div>
+      <div style="margin:12px 12px 0;padding:15px;background:var(--card);border:1px solid var(--b1);border-radius:var(--r3)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--a3);margin-bottom:8px">📜 Manuscript Fact</div>
+        <div style="font-family:var(--sf);font-size:.92rem;line-height:1.7;color:var(--t2)">The KJV (1611) was translated by 47 scholars from the Masoretic Text (Hebrew OT) and the Textus Receptus (Greek NT). It remains one of the most widely read English Bible translations in history.</div>
+      </div>
+      <div style="height:14px"></div>
+    </div>
+
+    <!-- READER -->
+    <div class="scr" id="s-reader">
+      <div class="rctrl">
+        <button class="bsel" onclick="go('library')"><span id="rdrLbl">Psalms · Ch. 23</span><span style="color:var(--t3)">▾</span></button>
+        <div class="cnav">
+          <button class="cn" onclick="prevCh()">‹</button>
+          <div class="cnum" id="cnum">23</div>
+          <button class="cn" onclick="nextCh()">›</button>
+        </div>
+        <button class="aabtn" onclick="openSett()">Aa</button>
+      </div>
+      <div class="hscroll" style="padding:8px 12px" id="transRow">
+        <button class="pill on" onclick="setTrans(this,'kjv')">KJV</button>
+        <button class="pill" onclick="setTrans(this,'web')">WEB</button>
+        <button class="pill" onclick="setTrans(this,'asv')">ASV</button>
+        <button class="pill" onclick="setTrans(this,'ylt')">YLT</button>
+        <button class="pill" onclick="setTrans(this,'adhd')">⚡ ADHD</button>
+      </div>
+      <div class="scripture" id="sw">
+        <div class="bloader"><div class="spin"></div><div style="font-size:.88rem;color:var(--t3)">Loading Scripture…</div></div>
+      </div>
+    </div>
+
+    <!-- LIBRARY -->
+    <div class="scr" id="s-library">
+      <div class="sinp"><span class="sic">🔍</span><input type="search" placeholder="Search all 66 books…" oninput="renderBooks(this.value)"></div>
+      <div id="booksC"></div>
+      <div style="height:14px"></div>
+    </div>
+
+    <!-- JOURNAL -->
+    <div class="scr" id="s-journal">
+      <button class="jnew" onclick="openJed()"><span style="font-size:1.1rem;color:var(--a3)">✦</span><span>New prayer, reflection, or note…</span></button>
+      <div class="jfrow">
+        <button class="jfil on" onclick="filterJ(this,'all')">All</button>
+        <button class="jfil" onclick="filterJ(this,'Praise')">🙌 Praise</button>
+        <button class="jfil" onclick="filterJ(this,'Gratitude')">💛 Gratitude</button>
+        <button class="jfil" onclick="filterJ(this,'Intercession')">🙏 Intercession</button>
+        <button class="jfil" onclick="filterJ(this,'Confession')">🕊️ Confession</button>
+        <button class="jfil" onclick="filterJ(this,'Petition')">📩 Petition</button>
+        <button class="jfil" onclick="filterJ(this,'Reflection')">📖 Reflection</button>
+        <button class="jfil" onclick="filterJ(this,'Lament')">💧 Lament</button>
+      </div>
+      <div class="jlist" id="jlist"></div>
+      <div style="height:14px"></div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="scr" id="s-progress">
+      <div class="shero">
+        <div class="flame">🔥</div>
+        <div class="snum" id="pStrk">7</div>
+        <div class="slb">Day Streak — Keep going!</div>
+        <div style="font-size:11px;color:var(--a3);opacity:.7;margin-top:3px">Best: 14 days · Last read: Today</div>
+      </div>
+      <div class="shdr"><span class="stitle">This Month</span></div>
+      <div class="hmap" id="hmap"></div>
+      <div class="shdr"><span class="stitle">Reading Plans</span></div>
+      <div class="plcard"><div class="plname">📖 Bible in a Year</div><div class="plmeta"><span>Day 48 of 365</span><span>13%</span></div><div class="pbar-wrap"><div class="pbar" style="width:13%"></div></div></div>
+      <div class="plcard"><div class="plname">🎵 Psalms &amp; Proverbs</div><div class="plmeta"><span>Day 12 of 60</span><span>20%</span></div><div class="pbar-wrap"><div class="pbar" style="width:20%"></div></div></div>
+      <div class="shdr"><span class="stitle">Lifetime Stats</span></div>
+      <div class="srow" style="padding:0 12px">
+        <div class="stat"><div class="sval" id="pCh">23</div><div class="slbl">Chapters</div></div>
+        <div class="stat"><div class="sval" id="pBk">0</div><div class="slbl">Bookmarks</div></div>
+        <div class="stat"><div class="sval" id="pPr">0</div><div class="slbl">Prayers</div></div>
+      </div>
+      <div style="height:14px"></div>
+    </div>
+
+    <!-- TIMER -->
+    <div class="scr" id="s-timer">
+      <div class="timerscr">
+        <div class="rw">
+          <svg class="rsvg" viewBox="0 0 190 190">
+            <defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#C4922A"/><stop offset="100%" stop-color="#F5D07A"/></linearGradient></defs>
+            <circle class="rtrack" cx="95" cy="95" r="85"/>
+            <circle class="rprog" cx="95" cy="95" r="85" id="ringP"/>
+          </svg>
+          <div class="rinner"><div class="rtime" id="tdisp">25:00</div><div class="rphase" id="tphase">Ready</div></div>
+        </div>
+        <div class="prow">
+          <button class="pre" onclick="setDur(this,5)">5 min</button>
+          <button class="pre" onclick="setDur(this,10)">10 min</button>
+          <button class="pre on" onclick="setDur(this,25)">25 min</button>
+          <button class="pre" onclick="setDur(this,45)">45 min</button>
+        </div>
+        <div class="tbtns">
+          <button class="tsec" onclick="resetTimer()">↺</button>
+          <button class="tplay" onclick="toggleTimer()" id="tplay">▶</button>
+          <button class="tsec" onclick="openPassage('Psalms',23)">📖</button>
+        </div>
+        <div class="tipc"><div class="tipttl">🧠 ADHD Reading Tips</div><div class="tipb">Read <strong>one paragraph</strong> at a time<br>Highlight as you go — keeps you engaged<br>Read out loud to boost retention<br>Ask <em>"What is God like here?"</em> after each passage<br>Take breaks every 10–15 min — no guilt</div></div>
+        <div class="tipc"><div class="tipttl">📖 S.O.A.P. Method</div><div class="tipb"><strong>S</strong> — Scripture (write the verse)<br><strong>O</strong> — Observation (what does it say?)<br><strong>A</strong> — Application (what does it mean for me?)<br><strong>P</strong> — Prayer (respond to God about it)</div></div>
+      </div>
+    </div>
+
+    <!-- AI -->
+    <div class="scr" id="s-ai">
+      <div class="aiwrap">
+        <div class="aibox">
+          <div class="aihdr"><div class="aititle">✨ AI Study Companion</div><div class="aisub">Ask anything about Scripture — Greek/Hebrew, context, application</div></div>
+          <div class="aikey" id="aiKeyS">
+            <div class="aikeylbl">🔑 Google Gemini API Key — 100% Free</div>
+            <div class="aikeynote">
+              Get a free key (no credit card needed) at <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>.<br>
+              Click <strong style="color:var(--t2)">Create API Key</strong> → copy it → paste below. Stored in your browser only — never sent anywhere except Google.
+            </div>
+            <div class="aikrow"><input type="password" class="aikinp" id="apiK" placeholder="AIza…"><button class="aiksave" onclick="saveKey()">Save</button></div>
+          </div>
+          <div class="aimsgs" id="aimsgs">
+            <div class="aibot">Welcome! Ask me about any verse, Greek &amp; Hebrew word meanings, historical context, cross-references, or how to apply Scripture to your life.</div>
+          </div>
+          <div class="aiirow">
+            <input class="aiinp" id="aiinp" placeholder="Ask about any verse or topic…" onkeydown="if(event.key==='Enter')sendAI()">
+            <button class="aisend" onclick="sendAI()">Ask →</button>
+          </div>
+          <div class="aiprpts">
+            <button class="aiprpt" onclick="setQ(this.textContent)">What does "grace" mean in Greek?</button>
+            <button class="aiprpt" onclick="setQ(this.textContent)">Explain John 3:16 in context</button>
+            <button class="aiprpt" onclick="setQ(this.textContent)">Who wrote the Psalms?</button>
+            <button class="aiprpt" onclick="setQ(this.textContent)">Romans 8 and anxiety</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOOKMARKS -->
+    <div class="scr" id="s-bookmarks">
+      <div style="padding:12px">
+        <div style="font-family:var(--sf);font-size:.97rem;color:var(--t2);font-style:italic;margin-bottom:13px">"Your word I have treasured in my heart" — Psalm 119:11</div>
+        <div id="bklist"></div>
+      </div>
+    </div>
+
+    <!-- RESOURCES -->
+    <div class="scr" id="s-resources">
+      <div style="padding:12px">
+        <div style="font-family:var(--sf);font-size:1.35rem;font-weight:500;margin-bottom:4px">Resource Library</div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:12px">Handpicked tools for every kind of learner</div>
+        <div class="hscroll" style="margin:0 -12px;padding:0 12px 10px">
+          <button class="pill on" onclick="filterR(this,'all')">All</button>
+          <button class="pill" onclick="filterR(this,'study')">🔍 Study</button>
+          <button class="pill" onclick="filterR(this,'visual')">🗺️ Visual</button>
+          <button class="pill" onclick="filterR(this,'audio')">🎧 Audio</button>
+          <button class="pill" onclick="filterR(this,'adhd')">⚡ ADHD</button>
+          <button class="pill" onclick="filterR(this,'mss')">📜 Manuscripts</button>
+        </div>
+        <div id="rlist"></div>
+        <div style="height:14px"></div>
+      </div>
+    </div>
+
+    <!-- PLANS -->
+    <div class="scr" id="s-plans">
+      <div style="padding:12px">
+        <div style="font-family:var(--sf);font-size:1.35rem;font-weight:500;margin-bottom:13px">Reading Plans</div>
+        <div id="plansL"></div>
+        <div style="height:14px"></div>
+      </div>
+    </div>
+
+    <!-- AUDIO -->
+    <div class="scr" id="s-audio">
+      <div style="padding:12px">
+        <div style="font-family:var(--sf);font-size:1.35rem;font-weight:500;margin-bottom:4px">Audio Bible</div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:13px">Hear the Word read aloud by your device</div>
+        <div style="background:var(--card);border:1px solid var(--b2);border-radius:var(--r4);padding:22px;text-align:center;margin-bottom:13px">
+          <div style="font-family:var(--sf);font-size:1.12rem;margin-bottom:4px" id="audBook">Psalm 23</div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:18px">Device text-to-speech</div>
+          <button style="width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--a2),var(--a3));color:#0D0B08;font-size:19px;display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow:0 4px 20px rgba(196,146,42,.4);transition:all .2s var(--sp)" onclick="toggleAudio()" id="audBtn">▶</button>
+          <div style="font-size:11px;color:var(--t3);margin-top:13px">Reads the currently loaded chapter from the Reader</div>
+        </div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--a3);margin-bottom:9px">Free Audio Sources</div>
+        <div id="audRes"></div>
+        <div style="height:14px"></div>
+      </div>
+    </div>
+
+    <!-- MAPS -->
+    <div class="scr" id="s-maps">
+      <div style="padding:12px">
+        <div style="font-family:var(--sf);font-size:1.35rem;font-weight:500;margin-bottom:4px">Maps &amp; Geography</div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:13px">See where the Bible happened — geography unlocks meaning</div>
+        <a href="https://www.biblestudy.org/maps/main.html" target="_blank" class="rcard"><div class="ric">🗺️</div><div><div class="rname">BibleStudy.org Maps</div><div class="rsub">Paul's journeys, tribal lands, ancient cities — all free</div></div><div class="rarr">↗</div></a>
+        <a href="https://bibleatlas.org" target="_blank" class="rcard"><div class="ric">📍</div><div><div class="rname">Bible Atlas Interactive</div><div class="rsub">Search any biblical location on a modern map</div></div><div class="rarr">↗</div></a>
+        <a href="https://visualunit.me" target="_blank" class="rcard"><div class="ric">🎨</div><div><div class="rname">Visual Unit</div><div class="rsub">Illustrated Bible timeline infographics — free downloads</div></div><div class="rarr">↗</div></a>
+        <div style="height:14px"></div>
+      </div>
+    </div>
+
+    <!-- WORD STUDY -->
+    <div class="scr" id="s-word">
+      <div style="padding:12px">
+        <div style="font-family:var(--sf);font-size:1.35rem;font-weight:500;margin-bottom:4px">Word &amp; Topic Study</div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:13px">Search by topic or dive into original Greek &amp; Hebrew</div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--a3);margin-bottom:8px">Popular Topics</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:13px">
+          <button onclick="setQ('What does faith mean in the Bible? Give key verses.');go('ai')" style="background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);padding:11px;color:var(--t2);font-size:.84rem;text-align:left;transition:all .2s" onmouseover="this.style.borderColor='var(--b2)'" onmouseout="this.style.borderColor='var(--b1)'">✝️ Faith</button>
+          <button onclick="setQ('What does grace mean in Greek? Key Bible verses.');go('ai')" style="background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);padding:11px;color:var(--t2);font-size:.84rem;text-align:left;transition:all .2s" onmouseover="this.style.borderColor='var(--b2)'" onmouseout="this.style.borderColor='var(--b1)'">🕊️ Grace</button>
+          <button onclick="setQ('What does shalom mean in Hebrew? How is it used?');go('ai')" style="background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);padding:11px;color:var(--t2);font-size:.84rem;text-align:left;transition:all .2s" onmouseover="this.style.borderColor='var(--b2)'" onmouseout="this.style.borderColor='var(--b1)'">☮️ Peace (Shalom)</button>
+          <button onclick="setQ('What does agape love mean in Greek? Key Bible verses.');go('ai')" style="background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);padding:11px;color:var(--t2);font-size:.84rem;text-align:left;transition:all .2s" onmouseover="this.style.borderColor='var(--b2)'" onmouseout="this.style.borderColor='var(--b1)'">❤️ Love (Agape)</button>
+          <button onclick="setQ('What does redemption mean in the Bible?');go('ai')" style="background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);padding:11px;color:var(--t2);font-size:.84rem;text-align:left;transition:all .2s" onmouseover="this.style.borderColor='var(--b2)'" onmouseout="this.style.borderColor='var(--b1)'">💫 Redemption</button>
+          <button onclick="setQ('What is the Holy Spirit? Key Bible verses about the Spirit.');go('ai')" style="background:var(--card);border:1px solid var(--b1);border-radius:var(--r2);padding:11px;color:var(--t2);font-size:.84rem;text-align:left;transition:all .2s" onmouseover="this.style.borderColor='var(--b2)'" onmouseout="this.style.borderColor='var(--b1)'">🔥 Holy Spirit</button>
+        </div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--a3);margin-bottom:8px">Original Language Tools</div>
+        <a href="https://www.blueletterbible.org" target="_blank" class="rcard"><div class="ric">📘</div><div><div class="rname">Blue Letter Bible</div><div class="rsub">Greek & Hebrew lexicons, Strong's Concordance, commentaries</div></div><div class="rarr">↗</div></a>
+        <a href="https://biblehub.com/interlinear/" target="_blank" class="rcard"><div class="ric">📝</div><div><div class="rname">Interlinear Bible (BibleHub)</div><div class="rsub">Every word with its Greek/Hebrew original underneath</div></div><div class="rarr">↗</div></a>
+        <div style="height:14px"></div>
+      </div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="scr" id="s-timeline">
+      <div style="padding:12px">
+        <div style="font-family:var(--sf);font-size:1.35rem;font-weight:500;margin-bottom:4px">Bible Timeline</div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:13px">6,000+ years of sacred history at a glance</div>
+        <a href="https://visualunit.me" target="_blank" class="rcard"><div class="ric">🎨</div><div><div class="rname">Visual Unit</div><div class="rsub">Illustrated timeline from creation to new creation — free</div></div><div class="rarr">↗</div></a>
+        <div style="margin-top:12px;padding:15px;background:var(--card);border:1px solid var(--b1);border-radius:var(--r3)">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--a3);margin-bottom:8px">Key Eras</div>
+          <div style="font-family:var(--sf);font-size:.92rem;line-height:2;color:var(--t2)">Creation → Fall (Gen 1–3)<br>Patriarchs: ~2000 BC (Gen 12–50)<br>Exodus: ~1446 BC<br>United Kingdom: ~1050–930 BC<br>Exile to Babylon: 586 BC<br>Return & Rebuild: ~538 BC<br>Intertestamental: ~400 years of silence<br>Birth of Christ: ~4 BC<br>Ministry & Resurrection: ~30 AD<br>Church Age: ~30–100 AD (Acts–Revelation)</div>
+        </div>
+        <div style="height:14px"></div>
+      </div>
+    </div>
+
+    <!-- FAMILY -->
+    <div class="scr" id="s-family">
+      <div style="padding:12px">
+        <div style="font-family:var(--sf);font-size:1.35rem;font-weight:500;margin-bottom:4px">Family &amp; Discipleship</div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:13px">Resources for raising children in the faith</div>
+        <div id="famRes"></div>
+        <div style="height:14px"></div>
+      </div>
+    </div>
+
+    <!-- DATA -->
+    <div class="scr" id="s-data">
+      <div style="padding:12px">
+        <div style="font-family:var(--sf);font-size:1.35rem;font-weight:500;margin-bottom:4px">My Data</div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:13px">Back up, restore, or clear your data</div>
+        <div style="background:rgba(232,184,75,.07);border:1px solid rgba(232,184,75,.18);border-radius:var(--r2);padding:13px;margin-bottom:13px;font-size:13px;color:var(--t2);line-height:1.7">⚠️ Sanctum stores data in your browser's localStorage. Export regularly. Data stays on your device only.</div>
+        <button class="dbtn" onclick="exportJSON()"><div class="dbic">📤</div><div><div class="dbttl">Export as JSON</div><div class="dbsub">Full backup — bookmarks, prayers, highlights</div></div></button>
+        <button class="dbtn" onclick="exportCSV()"><div class="dbic">📊</div><div><div class="dbttl">Export as CSV</div><div class="dbsub">Open bookmarks in Excel or Google Sheets</div></div></button>
+        <button class="dbtn ddanger" onclick="clearData()"><div class="dbic">🗑️</div><div><div class="dbttl">Clear All Data</div><div class="dbsub">Permanently deletes everything — cannot be undone</div></div></button>
+      </div>
+    </div>
+
+  </div><!-- /scroll -->
+
+  <!-- TAB BAR — in normal flex flow, always visible -->
+  <nav id="tabs">
+    <button class="tab on" id="tab-home" onclick="go('home')"><div class="tab-dot"></div><div class="tab-ic">🏠</div><div class="tab-lb">Home</div></button>
+    <button class="tab" id="tab-reader" onclick="go('reader')"><div class="tab-dot"></div><div class="tab-ic">📖</div><div class="tab-lb">Read</div></button>
+    <button class="tab" id="tab-journal" onclick="go('journal')"><div class="tab-dot"></div><div class="tab-ic">🙏</div><div class="tab-lb">Pray</div></button>
+    <button class="tab" id="tab-progress" onclick="go('progress')"><div class="tab-dot"></div><div class="tab-ic">📊</div><div class="tab-lb">Progress</div></button>
+    <button class="tab" id="tab-more" onclick="toggleMore()"><div class="tab-dot"></div><div class="tab-ic">☰</div><div class="tab-lb">More</div></button>
+  </nav>
+</div>
+
+<!-- MORE MENU -->
+<div id="moreov" onclick="closeMore()"></div>
+<div id="more">
+  <div style="width:34px;height:4px;background:var(--b2);border-radius:2px;margin:0 auto 4px"></div>
+  <div class="moregrid">
+    <button class="mtile" onclick="go('library')"><div class="mtic">📚</div><div class="mtlb">Library</div></button>
+    <button class="mtile" onclick="go('ai')"><div class="mtic">✨</div><div class="mtlb">AI Study</div></button>
+    <button class="mtile" onclick="go('timer')"><div class="mtic">⏱️</div><div class="mtlb">Timer</div></button>
+    <button class="mtile" onclick="go('resources')"><div class="mtic">🌐</div><div class="mtlb">Resources</div></button>
+    <button class="mtile" onclick="go('bookmarks')"><div class="mtic">🔖</div><div class="mtlb">Bookmarks</div></button>
+    <button class="mtile" onclick="go('plans')"><div class="mtic">📅</div><div class="mtlb">Plans</div></button>
+    <button class="mtile" onclick="go('audio')"><div class="mtic">🎧</div><div class="mtlb">Audio</div></button>
+    <button class="mtile" onclick="go('maps')"><div class="mtic">🗺️</div><div class="mtlb">Maps</div></button>
+    <button class="mtile" onclick="go('word')"><div class="mtic">🔍</div><div class="mtlb">Word Study</div></button>
+    <button class="mtile" onclick="go('timeline')"><div class="mtic">⏳</div><div class="mtlb">Timeline</div></button>
+    <button class="mtile" onclick="go('family')"><div class="mtic">👨‍👩‍👧</div><div class="mtlb">Family</div></button>
+    <button class="mtile" onclick="go('data')"><div class="mtic">💾</div><div class="mtlb">My Data</div></button>
+  </div>
+  <div style="height:env(safe-area-inset-bottom,0px)"></div>
+</div>
+
+<!-- VERSE POPUP -->
+<div id="vpop">
+  <div class="vpref" id="vpref">Genesis 1:1</div>
+  <div class="vpacts">
+    <button class="vpa" onclick="doHL()"><span>🖊️</span><div class="vpal">Highlight</div></button>
+    <button class="vpa" onclick="doBK()"><span>🔖</span><div class="vpal">Bookmark</div></button>
+    <button class="vpa" onclick="doStudy()"><span>🔍</span><div class="vpal">Study</div></button>
+    <button class="vpa" onclick="doShare()"><span>📤</span><div class="vpal">Share</div></button>
+  </div>
+  <div class="hlrow">
+    <div class="hlc on" style="background:#E8B84B" onclick="setHLC(this,'#E8B84B')"></div>
+    <div class="hlc" style="background:#7CB9E8" onclick="setHLC(this,'#7CB9E8')"></div>
+    <div class="hlc" style="background:#98D88A" onclick="setHLC(this,'#98D88A')"></div>
+    <div class="hlc" style="background:#E88AAA" onclick="setHLC(this,'#E88AAA')"></div>
+    <div class="hlc" style="background:#C8A8E8" onclick="setHLC(this,'#C8A8E8')"></div>
+  </div>
+</div>
+
+<!-- JOURNAL EDITOR -->
+<div id="jed">
+  <div class="jedh">
+    <button class="jedc" onclick="closeJed()">✕</button>
+    <input class="jedt" placeholder="Title (optional)…" id="jedT">
+    <button class="jeds" onclick="saveJ()">Save</button>
+  </div>
+  <div class="jedtp">
+    <button class="typil on" onclick="setJT(this,'Praise')">🙌 Praise</button>
+    <button class="typil" onclick="setJT(this,'Gratitude')">💛 Gratitude</button>
+    <button class="typil" onclick="setJT(this,'Intercession')">🙏 Intercession</button>
+    <button class="typil" onclick="setJT(this,'Confession')">🕊️ Confession</button>
+    <button class="typil" onclick="setJT(this,'Petition')">📩 Petition</button>
+    <button class="typil" onclick="setJT(this,'Reflection')">📖 Reflection</button>
+    <button class="typil" onclick="setJT(this,'Lament')">💧 Lament</button>
+  </div>
+  <input class="jedv" placeholder="Related verse (e.g. Psalm 23:1)…" id="jedV">
+  <div class="jedbody"><textarea class="jedta" placeholder="Write your prayer, reflection, or note…" id="jedB"></textarea></div>
+</div>
+
+<!-- SETTINGS -->
+<div id="sett">
+  <div class="seth"><button class="jedc" onclick="closeSett()">✕</button><span class="settitle">Settings</span></div>
+  <div class="setb">
+    <div class="setrow"><span class="setlbl">Dark Mode</span><div class="tog on" id="darkTog" onclick="toggleTheme()"></div></div>
+    <div class="setrow"><span class="setlbl">ADHD Mode</span><div class="tog" id="adhdTog" onclick="toggleADHD()"></div></div>
+    <div class="setrow"><span class="setlbl">Font Size</span><div class="fctr"><button class="fbtn" onclick="chFont(-1)">−</button><div class="fval" id="fval">16</div><button class="fbtn" onclick="chFont(1)">+</button></div></div>
+    <div class="setrow"><span class="setlbl">Translation</span><span class="setval" id="setTrans">KJV</span></div>
+    <div style="margin-top:18px;font-size:.86rem;color:var(--t3);line-height:1.7">Bible text loads from <strong style="color:var(--t2)">bible-api.com</strong> — free and open source. Chapters are cached after first load for fast offline reading.<br><br>Available: KJV, WEB, ASV, YLT (all public domain). ADHD mode reformats text with extra spacing.</div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+// ── STORAGE ──
+const S={get:k=>{try{return JSON.parse(localStorage.getItem('sc_'+k))}catch{return null}},set:(k,v)=>localStorage.setItem('sc_'+k,JSON.stringify(v)),del:k=>localStorage.removeItem('sc_'+k)};
+
+// ── STATE ──
+const A={screen:'home',book:'Psalms',ch:23,trans:'kjv',adhd:false,theme:'dark',fs:16,hlc:'#E8B84B',jf:'all',jt:'Praise',rf:'all',sv:null,tdur:25*60,tleft:25*60,trun:false,tint:null,aplaying:false,mopen:false,cache:{}};
+
+// ── BOOK DATA ──
+const OT=[{a:'Gen',n:'Genesis',c:50},{a:'Exod',n:'Exodus',c:40},{a:'Lev',n:'Leviticus',c:27},{a:'Num',n:'Numbers',c:36},{a:'Deut',n:'Deuteronomy',c:34},{a:'Josh',n:'Joshua',c:24},{a:'Judg',n:'Judges',c:21},{a:'Ruth',n:'Ruth',c:4},{a:'1Sam',n:'1 Samuel',c:31},{a:'2Sam',n:'2 Samuel',c:24},{a:'1Kgs',n:'1 Kings',c:22},{a:'2Kgs',n:'2 Kings',c:25},{a:'1Chr',n:'1 Chronicles',c:29},{a:'2Chr',n:'2 Chronicles',c:36},{a:'Ezra',n:'Ezra',c:10},{a:'Neh',n:'Nehemiah',c:13},{a:'Esth',n:'Esther',c:10},{a:'Job',n:'Job',c:42},{a:'Ps',n:'Psalms',c:150},{a:'Prov',n:'Proverbs',c:31},{a:'Eccl',n:'Ecclesiastes',c:12},{a:'Song',n:'Song of Solomon',c:8},{a:'Isa',n:'Isaiah',c:66},{a:'Jer',n:'Jeremiah',c:52},{a:'Lam',n:'Lamentations',c:5},{a:'Ezek',n:'Ezekiel',c:48},{a:'Dan',n:'Daniel',c:12},{a:'Hos',n:'Hosea',c:14},{a:'Joel',n:'Joel',c:3},{a:'Amos',n:'Amos',c:9},{a:'Obad',n:'Obadiah',c:1},{a:'Jonah',n:'Jonah',c:4},{a:'Mic',n:'Micah',c:7},{a:'Nah',n:'Nahum',c:3},{a:'Hab',n:'Habakkuk',c:3},{a:'Zeph',n:'Zephaniah',c:3},{a:'Hag',n:'Haggai',c:2},{a:'Zech',n:'Zechariah',c:14},{a:'Mal',n:'Malachi',c:4}];
+const NT=[{a:'Matt',n:'Matthew',c:28},{a:'Mark',n:'Mark',c:16},{a:'Luke',n:'Luke',c:24},{a:'John',n:'John',c:21},{a:'Acts',n:'Acts',c:28},{a:'Rom',n:'Romans',c:16},{a:'1Cor',n:'1 Corinthians',c:16},{a:'2Cor',n:'2 Corinthians',c:13},{a:'Gal',n:'Galatians',c:6},{a:'Eph',n:'Ephesians',c:6},{a:'Phil',n:'Philippians',c:4},{a:'Col',n:'Colossians',c:4},{a:'1Thess',n:'1 Thessalonians',c:5},{a:'2Thess',n:'2 Thessalonians',c:3},{a:'1Tim',n:'1 Timothy',c:6},{a:'2Tim',n:'2 Timothy',c:4},{a:'Titus',n:'Titus',c:3},{a:'Phlm',n:'Philemon',c:1},{a:'Heb',n:'Hebrews',c:13},{a:'Jas',n:'James',c:5},{a:'1Pet',n:'1 Peter',c:5},{a:'2Pet',n:'2 Peter',c:3},{a:'1John',n:'1 John',c:5},{a:'2John',n:'2 John',c:1},{a:'3John',n:'3 John',c:1},{a:'Jude',n:'Jude',c:1},{a:'Rev',n:'Revelation',c:22}];
+const BOOKS=[...OT,...NT];
+
+const APIMAP={'1 Samuel':'1+Samuel','2 Samuel':'2+Samuel','1 Kings':'1+Kings','2 Kings':'2+Kings','1 Chronicles':'1+Chronicles','2 Chronicles':'2+Chronicles','Song of Solomon':'Song+of+Solomon','1 Corinthians':'1+Corinthians','2 Corinthians':'2+Corinthians','1 Thessalonians':'1+Thessalonians','2 Thessalonians':'2+Thessalonians','1 Timothy':'1+Timothy','2 Timothy':'2+Timothy','1 Peter':'1+Peter','2 Peter':'2+Peter','1 John':'1+John','2 John':'2+John','3 John':'3+John'};
+
+const VOTD=[{t:'"For I know the plans I have for you," declares the Lord, "plans to prosper you and not to harm you, plans to give you hope and a future."',r:'JEREMIAH 29:11'},{t:'"I can do all things through Him who strengthens me."',r:'PHILIPPIANS 4:13'},{t:'"Trust in the Lord with all your heart and do not lean on your own understanding."',r:'PROVERBS 3:5'},{t:'"For God so loved the world, that He gave His only begotten Son, that whoever believes in Him shall not perish, but have eternal life."',r:'JOHN 3:16'},{t:'"The Lord is my shepherd, I shall not want."',r:'PSALM 23:1'},{t:'"And we know that God causes all things to work together for good to those who love God."',r:'ROMANS 8:28'},{t:'"Your word is a lamp to my feet and a light to my path."',r:'PSALM 119:105'},{t:'"Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go."',r:'JOSHUA 1:9'},{t:'"Come to Me, all who are weary and heavy-laden, and I will give you rest."',r:'MATTHEW 11:28'},{t:'"The Lord is my light and my salvation; whom shall I fear?"',r:'PSALM 27:1'},{t:'"He gives strength to the weary, and to him who lacks might He increases power."',r:'ISAIAH 40:29'},{t:'"Do not be anxious about anything, but in everything by prayer and supplication with thanksgiving let your requests be made known to God."',r:'PHILIPPIANS 4:6'},{t:'"Delight yourself in the Lord; and He will give you the desires of your heart."',r:'PSALM 37:4'},{t:'"Create in me a clean heart, O God, and renew a steadfast spirit within me."',r:'PSALM 51:10'}];
+
+const RES=[{c:'study',i:'📘',n:'Blue Letter Bible',s:'Greek & Hebrew lexicons, Strong\'s Concordance, 680k+ pages',u:'https://www.blueletterbible.org'},{c:'study',i:'🌐',n:'Bible Hub',s:'Interlinear Bible, Strong\'s, 340k cross-references',u:'https://biblehub.com'},{c:'study',i:'📚',n:'Bible Study Tools Library',s:'Matthew Henry, Calvin, Spurgeon commentaries + concordances',u:'https://www.biblestudytools.com/library/'},{c:'study',i:'🎙️',n:'Enduring Word (Guzik)',s:'Verse-by-verse commentary for all 66 books',u:'https://enduringword.com'},{c:'study',i:'❓',n:'GotQuestions.org',s:'500,000+ biblical questions answered clearly',u:'https://www.gotquestions.org'},{c:'visual',i:'🗺️',n:'BibleStudy.org Maps',s:'Free maps: Paul\'s journeys, tribal lands, ancient cities',u:'https://www.biblestudy.org/maps/main.html'},{c:'visual',i:'🎨',n:'Visual Unit',s:'Illustrated Bible timeline infographics — free',u:'https://visualunit.me'},{c:'visual',i:'📍',n:'Bible Atlas Interactive',s:'Search any biblical location on a modern map',u:'https://bibleatlas.org'},{c:'audio',i:'🔊',n:'Faith Comes By Hearing',s:'Free audio Bible in 1,700+ languages',u:'https://www.faithcomesbyhearing.com'},{c:'audio',i:'🎵',n:'BibleGateway Audio',s:'Stream 20+ translations read aloud',u:'https://www.biblegateway.com/resources/audio/'},{c:'audio',i:'🎙️',n:'The Bible Project Podcast',s:'Deep conversational dives into Scripture',u:'https://www.bibleproject.com/podcasts/the-bible-project-podcast/'},{c:'adhd',i:'🎬',n:'The Bible Project',s:'Animated videos for every book — brilliant for visual/ADHD learners',u:'https://www.thebibleproject.com'},{c:'adhd',i:'⚡',n:'ADHD Bible',s:'Full Bible reformatted for ADHD minds — shorter paragraphs',u:'https://adhdbible.org'},{c:'adhd',i:'🧠',n:'Inspiring Philosophy',s:'Deep dives into biblical scholarship and historicity',u:'https://www.youtube.com/@InspiringPhilosophy'},{c:'mss',i:'📜',n:'Dead Sea Scrolls Archive',s:'Browse 2,000-year-old biblical manuscripts',u:'https://www.deadseascrolls.org.il/explore-the-archive'},{c:'mss',i:'🔬',n:'CSNTM',s:'High-res Greek NT manuscript images by Dr. Daniel Wallace',u:'https://www.csntm.org'},{c:'mss',i:'⛏️',n:'Biblical Archaeology Society',s:'Archaeological discoveries that illuminate the Bible',u:'https://www.biblicalarchaeology.org'}];
+
+const AUDRES=[{i:'🔊',n:'Faith Comes By Hearing — Free NASB/KJV MP3s',s:'Professional studio recording. 100% free.',u:'https://www.faithcomesbyhearing.com/audio-bible-resources/mp3s'},{i:'🎵',n:'BibleGateway Audio Streaming',s:'Stream 20+ translations in your browser.',u:'https://www.biblegateway.com/resources/audio/'},{i:'📱',n:'YouVersion Bible App',s:'Free audio, offline listening, reading plans.',u:'https://www.youversion.com/the-bible-app/'},{i:'🎙️',n:'The Bible Project Podcast',s:'Deep dives into biblical books and themes.',u:'https://www.bibleproject.com/podcasts/the-bible-project-podcast/'}];
+
+const FAMRES=[{i:'📖',n:'Family Worship Guide — Crossway',s:'Leading family devotions with children of all ages',u:'https://www.crossway.org/articles/family-worship/',b:'Free'},{i:'🏛️',n:'Ligonier Family Devotionals',s:'Free devotional content rooted in Reformed theology',u:'https://www.ligonier.org/learn/devotionals/family',b:'Free'},{i:'📜',n:'Westminster Shorter Catechism',s:'All 107 questions — 400 years of family catechesis',u:'https://www.apuritansmind.com/westminster-standards/shorter-catechism/',b:'Classic'},{i:'🎙️',n:'Grace to You — John MacArthur',s:'50+ years of expository sermons — free MP3s',u:'https://www.gty.org',b:'Free'},{i:'🎬',n:'The Bible Project for Kids',s:'Animated videos introducing children to biblical themes',u:'https://www.thebibleproject.com/explore/kids/',b:'Free'},{i:'👶',n:'Children Desiring God',s:'Curriculum for teaching children deep biblical truth',u:'https://www.childrendesiringgod.org',b:'Free/Low'}];
+
+const PLANS=[{i:'📖',n:'Bible in a Year',s:'3–5 chapters/day · ~15 min',d:365,done:48},{i:'🎵',n:'Psalms & Proverbs',s:'~5 min/day · 60 days',d:60,done:12},{i:'✝️',n:'4 Gospels in 30 Days',s:'~10 min/day · Matthew, Mark, Luke, John',d:30,done:0},{i:'📜',n:'New Testament in 90 Days',s:'~8 min/day · All 27 books',d:90,done:0},{i:'⚡',n:'ADHD Micro-Reading',s:'1 chapter/day · No pressure · Forever',d:0,done:0},{i:'🌅',n:'30 Days of Psalms',s:'5 Psalms/day · ~8 min · peace and prayer',d:30,done:0},{i:'🔥',n:'Acts: The Early Church',s:'28 days · 1 chapter/day',d:28,done:0}];
+
+// ── INIT ──
+function init(){
+  if(S.get('seen'))document.getElementById('ob').style.display='none';
+  A.theme=S.get('theme')||'dark';applyTheme();
+  A.adhd=S.get('adhd')||false;applyADHD();
+  A.fs=S.get('fs')||16;applyFS();
+  A.trans=S.get('trans')||'kjv';
+  document.getElementById('setTrans').textContent=A.trans.toUpperCase();
+  // VOTD
+  const v=VOTD[Math.floor(Date.now()/86400000)%VOTD.length];
+  document.getElementById('votdTxt').textContent='\u201c'+v.t.replace(/^[\u201c"]/,'').replace(/[\u201d"]$/,'')+'\u201d';
+  document.getElementById('votdRef').textContent=v.r+' \u00b7 NASB';
+  updateStats();renderBooks('');renderJ();renderRes();renderPlans();renderAudRes();renderFamRes();renderHmap();renderBK();
+  // Sync trans pills
+  document.querySelectorAll('#transRow .pill').forEach(p=>{
+    const pt=p.textContent.trim().replace('⚡ ','').toLowerCase();
+    p.classList.toggle('on',pt===A.trans||(A.trans==='adhd'&&pt==='adhd'));
+  });
+  loadBible();
+  const k=S.get('api_key');if(k){document.getElementById('apiK').value=k;document.getElementById('aiKeyS').style.display='none';}
+  setTimeout(markRead,20000);
+}
+
+// ── ONBOARDING ──
+function enterApp(){S.set('seen',true);const o=document.getElementById('ob');o.classList.add('gone');setTimeout(()=>o.style.display='none',600);}
+
+// ── NAVIGATION ──
+function go(name){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  const s=document.getElementById('s-'+name);if(s)s.classList.add('on');
+  const mainTabs=['home','reader','journal','progress'];
+  if(mainTabs.includes(name)){const t=document.getElementById('tab-'+name);if(t)t.classList.add('on');}
+  document.getElementById('scroll').scrollTo({top:0,behavior:'smooth'});
+  A.screen=name;
+  if(name==='reader')loadBible();
+  if(name==='bookmarks')renderBK();
+  if(name==='journal')renderJ();
+  if(name==='progress')updateStats();
+  closeMore();closeVP();
+}
+function openPassage(book,ch){A.book=book;A.ch=ch;go('reader');}
+
+// ── MORE MENU ──
+function toggleMore(){A.mopen?closeMore():openMore();}
+function openMore(){A.mopen=true;document.getElementById('tab-more').classList.add('on');document.getElementById('more').classList.add('show');const o=document.getElementById('moreov');o.classList.add('show');}
+function closeMore(){A.mopen=false;document.getElementById('tab-more').classList.remove('on');document.getElementById('more').classList.remove('show');document.getElementById('moreov').classList.remove('show');}
+
+// ── THEME ──
+function toggleTheme(){A.theme=A.theme==='dark'?'light':'dark';applyTheme();S.set('theme',A.theme);toast(A.theme==='dark'?'🌙 Dark mode':'☀️ Light mode');}
+function applyTheme(){document.documentElement.setAttribute('data-theme',A.theme);document.getElementById('themeBtn').textContent=A.theme==='dark'?'🌙':'☀️';document.getElementById('themeMeta').content=A.theme==='dark'?'#0D0B08':'#FAF6EE';const d=document.getElementById('darkTog');if(d)d.classList.toggle('on',A.theme==='dark');}
+
+// ── ADHD ──
+function toggleADHD(){A.adhd=!A.adhd;applyADHD();S.set('adhd',A.adhd);if(A.screen==='reader')loadBible();toast(A.adhd?'⚡ ADHD mode on':'⚡ ADHD mode off');}
+function applyADHD(){document.getElementById('adhdBtn').classList.toggle('on',A.adhd);const t=document.getElementById('adhdTog');if(t)t.classList.toggle('on',A.adhd);const sw=document.getElementById('sw');if(sw)sw.classList.toggle('adhd-mode',A.adhd);}
+
+// ── FONT ──
+function chFont(d){A.fs=Math.max(12,Math.min(24,A.fs+d));applyFS();S.set('fs',A.fs);}
+function applyFS(){document.querySelectorAll('.vtxt').forEach(e=>e.style.fontSize=A.fs+'px');const fv=document.getElementById('fval');if(fv)fv.textContent=A.fs;}
+
+// ── SETTINGS ──
+function openSett(){document.getElementById('sett').classList.add('open');}
+function closeSett(){document.getElementById('sett').classList.remove('open');}
+
+// ── BIBLE LOADING ──
+// Uses bible-api.com — free, no key, full Bible, KJV/WEB/ASV/YLT
+async function loadBible(){
+  const sw=document.getElementById('sw');if(!sw)return;
+  const t=A.trans==='adhd'?'kjv':A.trans;
+  const ck=A.book+'-'+A.ch+'-'+t;
+  document.getElementById('rdrLbl').textContent=A.book+' · Ch. '+A.ch;
+  document.getElementById('cnum').textContent=A.ch;
+  document.getElementById('audBook').textContent=A.book+' '+A.ch;
+  if(A.cache[ck]){renderV(A.cache[ck]);return;}
+  sw.innerHTML='<div class="bloader"><div class="spin"></div><div style="font-size:.86rem;color:var(--t3)">Loading '+A.book+' '+A.ch+'…</div></div>';
+  try{
+    const bn=APIMAP[A.book]||(A.book.replace(/ /g,'+'));
+    const url='https://bible-api.com/'+bn+'+'+A.ch+'?translation='+t;
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(!d.verses||!d.verses.length)throw new Error('No verses');
+    const vs=d.verses.map(v=>({n:v.verse,t:v.text.trim()}));
+    A.cache[ck]=vs;renderV(vs);
+  }catch(e){
+    sw.innerHTML='<div class="berr"><div style="font-size:2rem;margin-bottom:11px;opacity:.4">📖</div><div style="font-family:var(--sf);font-size:1.05rem;color:var(--t2);margin-bottom:8px">'+A.book+' '+A.ch+'</div><div style="font-size:13px;color:var(--t3);margin-bottom:18px;line-height:1.6">Could not load Bible text.<br>Check your internet connection.</div><a href="https://www.biblegateway.com/passage/?search='+encodeURIComponent(A.book+' '+A.ch)+'&version=KJV" target="_blank" style="display:inline-block;padding:10px 20px;background:var(--a2);color:#0D0B08;border-radius:var(--r2);font-weight:600;font-size:13px;text-decoration:none">Read on Bible Gateway →</a><div style="margin-top:9px"><button onclick="loadBible()" style="background:none;border:none;color:var(--a3);font-size:13px;cursor:pointer;text-decoration:underline">Try again</button></div></div>';
+  }
+}
+
+function renderV(vs){
+  const sw=document.getElementById('sw');
+  const bks=S.get('bk')||[];const hls=S.get('hl')||{};
+  const bi=BOOKS.find(b=>b.n===A.book);
+  let h='<div class="chtitle">'+A.book+' '+A.ch+'</div><div class="chsub">'+transLbl(A.trans)+'</div>';
+  vs.forEach(v=>{
+    const k=A.book+'|'+A.ch+'|'+v.n;
+    const isBk=bks.some(b=>b.k===k);
+    const hlc=hls[k];
+    let cls='verse'+(hlc?' hl':'')+(isBk?' bkd':'');
+    const bs=hlc?'style="border-left-color:'+hlc+'"':'';
+    const txt=A.adhd?v.t.split(/(?<=[.!?])\s+/).join('<br>'):v.t;
+    h+='<div class="'+cls+'" '+bs+' data-k="'+k+'" data-n="'+v.n+'" data-t="'+encodeURIComponent(v.t)+'" onclick="selV(this)"><span class="vnum">'+v.n+'</span><span class="vtxt" style="font-size:'+A.fs+'px">'+txt+'</span></div>';
+  });
+  const maxC=bi?bi.c:150;
+  h+='<div class="navbtns">';
+  h+=A.ch>1?'<button class="navbtn" onclick="prevCh()">‹ Previous</button>':'<div style="flex:1"></div>';
+  h+=A.ch<maxC?'<button class="navbtn" onclick="nextCh()">Next ›</button>':'<div style="flex:1"></div>';
+  h+='</div>';
+  sw.innerHTML=h;
+  if(A.adhd)sw.classList.add('adhd-mode');else sw.classList.remove('adhd-mode');
+}
+function transLbl(t){return{kjv:'King James Version',web:'World English Bible',asv:'American Standard Version',ylt:"Young's Literal Translation",adhd:'⚡ ADHD Mode (KJV)'}[t]||t.toUpperCase();}
+
+// ── READER CONTROLS ──
+function prevCh(){if(A.ch>1){A.ch--;loadBible();document.getElementById('scroll').scrollTo({top:0,behavior:'smooth'});}}
+function nextCh(){const b=BOOKS.find(x=>x.n===A.book);if(A.ch<(b?b.c:150)){A.ch++;loadBible();document.getElementById('scroll').scrollTo({top:0,behavior:'smooth'});}}
+function setTrans(btn,t){A.trans=t;document.querySelectorAll('#transRow .pill').forEach(p=>p.classList.remove('on'));btn.classList.add('on');document.getElementById('setTrans').textContent=t.toUpperCase().replace('ADHD','⚡ADHD');S.set('trans',t);loadBible();toast('📖 '+t.toUpperCase());}
+
+// ── VERSE INTERACTION ──
+function selV(el){
+  A.sv={k:el.dataset.k,n:el.dataset.n,t:decodeURIComponent(el.dataset.t),el};
+  const p=el.dataset.k.split('|');
+  document.getElementById('vpref').textContent=p[0]+' '+p[1]+':'+p[2]+' · '+(A.trans==='adhd'?'KJV':A.trans.toUpperCase());
+  document.getElementById('vpop').classList.add('show');
+}
+function closeVP(){document.getElementById('vpop').classList.remove('show');A.sv=null;}
+function doHL(){if(!A.sv)return;const{k,el}=A.sv;const h=S.get('hl')||{};if(h[k]===A.hlc){delete h[k];el.classList.remove('hl');el.style.borderLeftColor='';}else{h[k]=A.hlc;el.classList.add('hl');el.style.borderLeftColor=A.hlc;}S.set('hl',h);toast('✨ Highlighted');closeVP();}
+function doBK(){if(!A.sv)return;const{k,t,el}=A.sv;const bks=S.get('bk')||[];const i=bks.findIndex(b=>b.k===k);if(i>=0){bks.splice(i,1);el.classList.remove('bkd');toast('🔖 Bookmark removed');}else{const p=k.split('|');bks.unshift({k,book:p[0],chapter:p[1],verse:p[2],text:t,date:new Date().toISOString()});el.classList.add('bkd');toast('🔖 Bookmarked!');}S.set('bk',bks);updateStats();closeVP();}
+function doStudy(){if(!A.sv)return;const p=A.sv.k.split('|');setQ('Explain '+p[0]+' '+p[1]+':'+p[2]+' — original language meaning, historical context, and practical application.');go('ai');closeVP();}
+function doShare(){if(!A.sv)return;const p=A.sv.k.split('|');const txt='"'+A.sv.t+'" — '+p[0]+' '+p[1]+':'+p[2];if(navigator.share)navigator.share({text:txt,title:'Scripture from Sanctum'});else navigator.clipboard.writeText(txt).then(()=>toast('📋 Copied!'));closeVP();}
+function setHLC(el,c){A.hlc=c;document.querySelectorAll('.hlc').forEach(x=>x.classList.remove('on'));el.classList.add('on');}
+document.addEventListener('click',e=>{if(document.getElementById('vpop').classList.contains('show')&&!e.target.closest('#vpop')&&!e.target.closest('.verse'))closeVP();});
+
+// ── BOOKS ──
+function renderBooks(f){
+  const c=document.getElementById('booksC');if(!c)return;
+  const flt=(f||'').toLowerCase();
+  let h='';
+  const sec=(lbl,arr)=>{const fil=flt?arr.filter(b=>b.n.toLowerCase().includes(flt)||b.a.toLowerCase().includes(flt)):arr;if(!fil.length)return;h+='<div class="tstlbl">'+lbl+' — '+fil.length+' Books</div><div class="bgrid">';fil.forEach(b=>{h+='<button class="btile" onclick="openPassage(\''+b.n+'\',1)"><div class="babbr">'+b.a+'</div><div class="bname">'+b.n+'</div></button>';});h+='</div>';};
+  sec('Old Testament',OT);sec('New Testament',NT);
+  c.innerHTML=h||'<div class="empty"><div class="empic">📚</div><div class="emptitle">No books found</div></div>';
+}
+
+// ── JOURNAL ──
+function openJed(){document.getElementById('jed').classList.add('open');document.getElementById('jedT').value='';document.getElementById('jedV').value='';document.getElementById('jedB').value='';document.querySelectorAll('.typil').forEach((p,i)=>p.classList.toggle('on',i===0));A.jt='Praise';setTimeout(()=>document.getElementById('jedB').focus(),400);}
+function closeJed(){document.getElementById('jed').classList.remove('open');}
+function setJT(el,t){A.jt=t;document.querySelectorAll('.typil').forEach(p=>p.classList.remove('on'));el.classList.add('on');}
+function saveJ(){const b=document.getElementById('jedB').value.trim();if(!b){toast('✍️ Write something first');return;}const e=S.get('j')||[];e.unshift({id:Date.now(),type:A.jt,title:document.getElementById('jedT').value.trim(),verse:document.getElementById('jedV').value.trim(),body:b,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})});S.set('j',e);closeJed();renderJ();updateStats();toast('🙏 Prayer saved');}
+function filterJ(el,t){A.jf=t;document.querySelectorAll('.jfil').forEach(f=>f.classList.remove('on'));el.classList.add('on');renderJ();}
+function renderJ(){const c=document.getElementById('jlist');if(!c)return;const e=S.get('j')||[];const f=A.jf==='all'?e:e.filter(x=>x.type===A.jf);if(!f.length){c.innerHTML='<div class="empty"><div class="empic">🙏</div><div class="emptitle">No prayers yet</div><div class="empsub">Tap the button above to write your first prayer or reflection.</div></div>';return;}c.innerHTML=f.map(x=>'<div class="jcard"><div class="jch"><span class="jbadge">'+x.type+'</span><span class="jdate">'+x.date+'</span></div>'+(x.title?'<div style="font-weight:600;font-size:.88rem;margin-bottom:5px;color:var(--t1)">'+x.title+'</div>':'')+(x.verse?'<div class="jverse">'+x.verse+'</div>':'')+'<div class="jbody">'+x.body+'</div></div>').join('');}
+
+// ── BOOKMARKS ──
+function renderBK(){const c=document.getElementById('bklist');if(!c)return;const bks=S.get('bk')||[];if(!bks.length){c.innerHTML='<div class="empty"><div class="empic">🔖</div><div class="emptitle">No bookmarks yet</div><div class="empsub">Tap any verse in the Reader and choose Bookmark.</div></div>';return;}c.innerHTML=bks.map(b=>'<div class="bkcard"><div class="bkref">'+b.book+' '+b.chapter+':'+b.verse+'</div><div class="bktxt">'+b.text+'</div><div class="bkdt">'+new Date(b.date).toLocaleDateString()+'</div></div>').join('');}
+
+// ── RESOURCES ──
+function filterR(el,cat){A.rf=cat;document.querySelectorAll('#s-resources .pill').forEach(p=>p.classList.remove('on'));el.classList.add('on');renderRes();}
+function renderRes(){const c=document.getElementById('rlist');if(!c)return;const items=A.rf==='all'?RES:RES.filter(r=>r.c===A.rf);c.innerHTML=items.map(r=>'<a href="'+r.u+'" target="_blank" class="rcard"><div class="ric">'+r.i+'</div><div style="flex:1;min-width:0"><div class="rname">'+r.n+'</div><div class="rsub">'+r.s+'</div></div><div class="rarr">↗</div></a>').join('');}
+
+// ── PLANS ──
+function renderPlans(){const c=document.getElementById('plansL');if(!c)return;c.innerHTML=PLANS.map(p=>{const pct=p.d?Math.round(p.done/p.d*100):0;return'<div class="plcard"><div class="plname">'+p.i+' '+p.n+'</div><div class="plmeta"><span>'+(p.d?'Day '+p.done+' of '+p.d:'∞ Ongoing')+'</span>'+(p.d?'<span>'+pct+'%</span>':'')+'</div>'+(p.d?'<div class="pbar-wrap"><div class="pbar" style="width:'+pct+'%"></div></div>':'')+'<div style="font-size:12px;color:var(--t3);margin-top:5px">'+p.s+'</div></div>';}).join('');}
+
+// ── AUDIO ──
+function renderAudRes(){const c=document.getElementById('audRes');if(!c)return;c.innerHTML=AUDRES.map(r=>'<a href="'+r.u+'" target="_blank" class="rcard"><div class="ric">'+r.i+'</div><div style="flex:1;min-width:0"><div class="rname">'+r.n+'</div><div class="rsub">'+r.s+'</div></div><div class="rarr">↗</div></a>').join('');}
+function toggleAudio(){const btn=document.getElementById('audBtn');if(A.aplaying){speechSynthesis.cancel();A.aplaying=false;btn.textContent='▶';return;}const ck=A.book+'-'+A.ch+'-'+(A.trans==='adhd'?'kjv':A.trans);const vs=A.cache[ck];if(!vs){toast('📖 Load a chapter in the Reader first');return;}const utt=new SpeechSynthesisUtterance(vs.map(v=>v.n+'. '+v.t).join(' '));utt.rate=0.88;utt.onend=()=>{A.aplaying=false;btn.textContent='▶';};speechSynthesis.speak(utt);A.aplaying=true;btn.textContent='⏸';toast('🔊 Playing '+A.book+' '+A.ch);}
+
+// ── FAMILY ──
+function renderFamRes(){const c=document.getElementById('famRes');if(!c)return;c.innerHTML=FAMRES.map(r=>'<a href="'+r.u+'" target="_blank" class="rcard"><div class="ric">'+r.i+'</div><div style="flex:1;min-width:0"><div class="rname">'+r.n+'</div><div class="rsub">'+r.s+'</div></div><span class="chip">'+r.b+'</span></a>').join('');}
+
+// ── HEATMAP ──
+function renderHmap(){const c=document.getElementById('hmap');if(!c)return;const rd=S.get('rd')||[1,2,3,5,6,7,8,12,13,14,15,19,20,21,26,27,28];const td=new Date().getDate();const days=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();c.innerHTML='';for(let i=1;i<=Math.min(days,35);i++){const cnt=rd.filter(d=>d===i).length;const div=document.createElement('div');div.className='hd'+(cnt>=3?' r3':cnt>=2?' r2':cnt>=1?' r1':'')+(i===td?' td':'');const dt=new Date();dt.setDate(i);div.title=dt.toLocaleDateString('en-US',{month:'short',day:'numeric'})+(cnt?' · Read':'');c.appendChild(div);}}
+
+// ── STATS ──
+function updateStats(){const bkn=(S.get('bk')||[]).length;const prn=(S.get('j')||[]).length;const strk=S.get('strk')||7;const chs=S.get('chs')||23;const m={hStrk:strk+'🔥',hCh:chs,hBk:bkn,pStrk:strk,pCh:chs,pBk:bkn,pPr:prn};Object.entries(m).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});}
+
+// ── TIMER ──
+function setDur(btn,m){if(A.trun)return;A.tdur=m*60;A.tleft=m*60;updT();document.querySelectorAll('.pre').forEach(p=>p.classList.remove('on'));btn.classList.add('on');}
+function toggleTimer(){if(A.trun){clearInterval(A.tint);A.trun=false;document.getElementById('tplay').textContent='▶';document.getElementById('tphase').textContent='Paused';}else{if(A.tleft===0)A.tleft=A.tdur;A.trun=true;document.getElementById('tplay').textContent='⏸';document.getElementById('tphase').textContent='Focused';A.tint=setInterval(()=>{A.tleft--;updT();if(A.tleft<=0){clearInterval(A.tint);A.trun=false;document.getElementById('tplay').textContent='▶';document.getElementById('tphase').textContent='Done! 🎉';toast('🎉 Session complete!');if(navigator.vibrate)navigator.vibrate([200,100,200]);}},1000);}}
+function resetTimer(){clearInterval(A.tint);A.trun=false;A.tleft=A.tdur;document.getElementById('tplay').textContent='▶';document.getElementById('tphase').textContent='Ready';updT();}
+function updT(){const m=String(Math.floor(A.tleft/60)).padStart(2,'0'),s=String(A.tleft%60).padStart(2,'0');document.getElementById('tdisp').textContent=m+':'+s;document.getElementById('ringP').style.strokeDashoffset=534*(1-A.tleft/A.tdur);}
+
+// ── VOTD ──
+function listenVOTD(){const u=new SpeechSynthesisUtterance(document.getElementById('votdTxt').textContent);u.rate=0.85;speechSynthesis.speak(u);toast('🔊 Playing…');}
+function bookmarkVOTD(){const bks=S.get('bk')||[];bks.unshift({k:'votd-'+Date.now(),book:'VOTD',chapter:'',verse:'',text:document.getElementById('votdTxt').textContent,date:new Date().toISOString()});S.set('bk',bks);updateStats();toast('🔖 Verse bookmarked!');}
+function shareVOTD(){const txt=document.getElementById('votdTxt').textContent+'\n— '+document.getElementById('votdRef').textContent;if(navigator.share)navigator.share({text:txt,title:'Verse of the Day'});else navigator.clipboard.writeText(txt).then(()=>toast('📋 Copied!'));}
+
+// ── AI ──
+function saveKey(){const k=document.getElementById('apiK').value.trim();if(!k){toast('🔑 Enter your key first');return;}S.set('api_key',k);document.getElementById('aiKeyS').style.display='none';toast('🔑 API key saved');}
+function setQ(t){document.getElementById('aiinp').value=t;}
+async function sendAI(){
+  const inp=document.getElementById('aiinp');
+  const q=inp.value.trim();
+  if(!q)return;
+  const msgs=document.getElementById('aimsgs');
+  msgs.innerHTML+='<div class="aiuser">'+q+'</div>';
+  inp.value='';
+  msgs.scrollTop=msgs.scrollHeight;
+  const k=S.get('api_key');
+  if(!k){
+    msgs.innerHTML+='<div class="aibot">Please save your free Google Gemini API key above. Get one at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--a3)">aistudio.google.com/app/apikey</a> — no credit card needed.</div>';
+    msgs.scrollTop=msgs.scrollHeight;
+    return;
+  }
+  const lid='ld'+Date.now();
+  msgs.innerHTML+='<div class="aibot" id="'+lid+'" style="color:var(--t3)">✦ Thinking…</div>';
+  msgs.scrollTop=msgs.scrollHeight;
+  const systemPrompt='You are a warm, knowledgeable Bible study companion inside the Sanctum Bible app. Help with Scripture questions, Greek and Hebrew word meanings (cite Strong\'s numbers when helpful), historical and cultural context, cross-references, and practical application. When the user asks for links or resources, provide real working URLs from trusted sites like blueletterbible.org, biblehub.com, gotquestions.org, or biblegateway.com. Current passage the user is reading: '+A.book+' '+A.ch+'. Keep answers clear, reverent, and concise.';
+  const fullPrompt=systemPrompt+'\n\nUser question: '+q;
+  try{
+    // Try models in order — all free, fall back if rate limited
+    const models=['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-pro'];
+    let rep=null;
+    let lastErr=null;
+    for(const model of models){
+      try{
+        const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+k,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            contents:[{parts:[{text:fullPrompt}]}],
+            generationConfig:{maxOutputTokens:800,temperature:0.7}
+          })
+        });
+        const d=await r.json();
+        if(d.error){lastErr=d.error.message;continue;}// try next model
+        rep=d.candidates?.[0]?.content?.parts?.[0]?.text||null;
+        if(rep)break;// got a good response
+      }catch(err){lastErr=err.message;continue;}
+    }
+    if(!rep){throw new Error(lastErr||'All models unavailable. Please wait a minute and try again.');}
+    document.getElementById(lid).remove();
+    // Convert markdown-ish to HTML, make URLs clickable
+    const formatted=rep
+      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g,'<em>$1</em>')
+      .replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" style="color:var(--a3);text-decoration:underline">$1</a>')
+      .replace(/\n\n/g,'<br><br>')
+      .replace(/\n/g,'<br>');
+    msgs.innerHTML+='<div class="aibot">'+formatted+'</div>';
+  }catch(e){
+    document.getElementById(lid).remove();
+    let errMsg='Something went wrong. Please try again in a moment.';
+    if(e.message.toLowerCase().includes('quota')||e.message.toLowerCase().includes('rate')){
+      errMsg='⏱️ Rate limit reached — the free tier allows ~15 requests per minute. Please wait 60 seconds and try again. Your key is working correctly.';
+    }else if(e.message.includes('API_KEY_INVALID')||e.message.includes('400')){
+      errMsg='🔑 Invalid API key. Make sure you copied the full key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--a3)">aistudio.google.com</a>';
+    }else if(e.message.includes('fetch')||e.message.includes('network')){
+      errMsg='📶 Network error — check your internet connection and try again.';
+    }
+    msgs.innerHTML+='<div class="aibot" style="color:#E88080">'+errMsg+'</div>';
+  }
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+// ── DATA ──
+function exportJSON(){const d={exported:new Date().toISOString(),bookmarks:S.get('bk')||[],highlights:S.get('hl')||{},journal:S.get('j')||[]};dlFile(JSON.stringify(d,null,2),'sanctum-backup.json','application/json');toast('📤 Exported');}
+function exportCSV(){const bks=S.get('bk')||[];const rows=[['Book','Chapter','Verse','Text','Date'],...bks.map(b=>[b.book,b.chapter,b.verse,(b.text||'').replace(/"/g,'""'),b.date||''])];dlFile(rows.map(r=>r.map(c=>'"'+c+'"').join(',')).join('\n'),'sanctum-bookmarks.csv','text/csv');toast('📊 Exported');}
+function dlFile(content,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();}
+function clearData(){if(confirm('Clear ALL bookmarks, prayers, highlights, and progress? Cannot be undone.')){['bk','hl','j','strk','rd','chs'].forEach(k=>S.del(k));updateStats();renderJ();renderBK();toast('🗑️ Data cleared');}}
+
+// ── MARK READ ──
+function markRead(){const rd=S.get('rd')||[];const td=new Date().getDate();if(!rd.includes(td)){rd.push(td);S.set('rd',rd);S.set('chs',(S.get('chs')||23)+1);renderHmap();updateStats();}}
+
+// ── KEYBOARD ──
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeVP();closeMore();closeJed();closeSett();}if(e.key==='ArrowLeft'&&A.screen==='reader')prevCh();if(e.key==='ArrowRight'&&A.screen==='reader')nextCh();});
+
+// ── TOAST ──
+function toast(msg){const c=document.getElementById('toasts');const t=document.createElement('div');t.className='toast';t.textContent=msg;c.appendChild(t);setTimeout(()=>t.remove(),2700);}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
