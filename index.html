@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script>
+/* Earliest guard: suppress harmless cross-origin "Script error." popups
+   from external resources (fonts, manifest, API) before anything else loads. */
+window.addEventListener('error', function(ev){
+  var m = ev && ev.message;
+  if(!m || m==='Script error.' || m==='Script error'){ if(ev.preventDefault) ev.preventDefault(); return false; }
+}, true);
+window.addEventListener('unhandledrejection', function(ev){ if(ev.preventDefault) ev.preventDefault(); });
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="images/cross-mind.png">
+<link rel="apple-touch-icon" href="images/cross-mind.png">
+<title>FocusWord — ADHD Bible</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Caveat:wght@500;600;700&display=swap" media="print" onload="this.media='all'" onerror="this.remove()">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Caveat:wght@500;600;700&display=swap"></noscript>
+<style>
+/* ============ THEMES ============ */
+:root, [data-theme="night"]{
+  --bg:#000000; --bg2:#0a0612; --surface:#13091f; --surface2:#1b0f2b;
+  --purple:#710280; --purple-soft:#9b2fb0; --teal:#095F80; --teal-soft:#13a3cc;
+  --gold:#e8b84b; --text:#f3eef9; --text-dim:#b9aecb; --text-faint:#7a7090;
+  --border:rgba(155,47,176,0.22); --lex:#13a3cc; --shadow:rgba(0,0,0,0.6);
+  --glow:rgba(113,2,128,0.45);
+}
+[data-theme="parchment"]{
+  --bg:#efe6d3; --bg2:#e6d9bf; --surface:#fbf5e9; --surface2:#f3e9d4;
+  --purple:#7a4a1e; --purple-soft:#9c6b34; --teal:#1d6b6b; --teal-soft:#2a8f8f;
+  --gold:#b8860b; --text:#3a2c18; --text-dim:#6b5a40; --text-faint:#9b8a6c;
+  --border:rgba(122,74,30,0.25); --lex:#1d6b6b; --shadow:rgba(120,90,40,0.25);
+  --glow:rgba(184,134,11,0.3);
+}
+[data-theme="ocean"]{
+  --bg:#0a1a2f; --bg2:#0d2138; --surface:#102844; --surface2:#163356;
+  --purple:#3d6bb0; --purple-soft:#5a8ad0; --teal:#0d8b9c; --teal-soft:#19b6cc;
+  --gold:#e3c878; --text:#eaf4ff; --text-dim:#a9c2dc; --text-faint:#6f8bab;
+  --border:rgba(61,107,176,0.28); --lex:#19b6cc; --shadow:rgba(0,10,25,0.6);
+  --glow:rgba(25,182,204,0.35);
+}
+[data-theme="forest"]{
+  --bg:#0d1a10; --bg2:#102415; --surface:#15301c; --surface2:#1d3f26;
+  --purple:#7a8c3a; --purple-soft:#9aae52; --teal:#2a7d5f; --teal-soft:#3aa37c;
+  --gold:#d9a441; --text:#eef6ea; --text-dim:#b3c9af; --text-faint:#7d9479;
+  --border:rgba(58,163,124,0.25); --lex:#3aa37c; --shadow:rgba(0,15,5,0.55);
+  --glow:rgba(58,163,124,0.3);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{
+  font-family:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text);
+  line-height:1.6; letter-spacing:0.01em; transition:background .4s,color .4s;
+  -webkit-font-smoothing:antialiased; overscroll-behavior:none;
+}
+#app{
+  max-width:520px; margin:0 auto; height:100dvh; display:flex; flex-direction:column;
+  position:relative; background:
+    radial-gradient(circle at 15% 0%, var(--glow), transparent 45%),
+    radial-gradient(circle at 90% 100%, rgba(9,95,128,0.18), transparent 50%),
+    var(--bg);
+  overflow:hidden; box-shadow:0 0 60px rgba(0,0,0,0.5);
+}
+::-webkit-scrollbar{width:0;height:0;}
+
+/* ============ SCREENS ============ */
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;display:none;padding-bottom:30px;}
+.screen.active{display:block;animation:fadeUp .4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+.pad{padding:18px;}
+
+/* ============ TOP BAR ============ */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;
+  position:sticky;top:0;z-index:20;
+  background:linear-gradient(to bottom,var(--bg) 60%,transparent);
+  backdrop-filter:blur(4px);
+}
+.topbar h1{font-size:21px;font-weight:700;letter-spacing:-0.01em;display:flex;align-items:center;gap:9px;}
+.topbar h1 .logo{
+  width:34px;height:34px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  overflow:hidden;
+}
+.topbar h1 .logo img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 6px var(--glow));}
+.iconbtn{
+  width:42px;height:42px;border-radius:12px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:18px;display:flex;
+  align-items:center;justify-content:center;cursor:pointer;transition:.2s;
+}
+.iconbtn:active{transform:scale(.92);background:var(--surface2);}
+
+/* ============ CARDS ============ */
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  padding:18px;margin-bottom:14px;box-shadow:0 4px 20px var(--shadow);
+  transition:transform .2s,border-color .2s;
+}
+.card.tap{cursor:pointer;}
+.card.tap:active{transform:scale(.98);border-color:var(--purple-soft);}
+.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);margin:22px 4px 10px;}
+.section-title:first-child{margin-top:6px;}
+
+/* ============ BUTTONS ============ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px 20px;border-radius:14px;border:none;font-family:inherit;
+  font-size:15px;font-weight:600;cursor:pointer;transition:.2s;width:100%;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:linear-gradient(135deg,var(--purple),var(--purple-soft));color:#fff;box-shadow:0 4px 18px var(--glow);}
+.btn-teal{background:linear-gradient(135deg,var(--teal),var(--teal-soft));color:#fff;}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#f0cf7a);color:#2a1c00;}
+.btn-sm{padding:9px 14px;font-size:13px;width:auto;}
+
+/* ============ TAB BAR ============ */
+.tabbar{
+  display:flex;border-top:1px solid var(--border);background:var(--surface);
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom));flex-shrink:0;z-index:30;
+  box-shadow:0 -4px 24px var(--shadow);
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 2px;background:none;border:none;color:var(--text-faint);
+  font-family:inherit;font-size:10.5px;font-weight:600;cursor:pointer;transition:.2s;
+}
+.tab .ti{font-size:21px;transition:.2s;display:flex;align-items:center;justify-content:center;height:24px;}
+.tab .ic{transition:.2s;}
+.tab.active{color:var(--purple-soft);}
+.tab.active .ti{transform:translateY(-2px) scale(1.1);}
+.tab.active .ic{filter:drop-shadow(0 0 6px var(--glow));}
+.ic{display:inline-block;vertical-align:middle;}
+.iconbtn .ic{filter:drop-shadow(0 0 3px var(--glow));}
+.qa-ic{display:flex;align-items:center;justify-content:center;width:54px;height:54px;margin:2px auto 0;border-radius:16px;background:radial-gradient(circle at 50% 40%,var(--glow),transparent 70%);color:var(--purple-soft);}
+.qa-ic .ic{filter:drop-shadow(0 0 7px var(--glow));}
+.qa:nth-child(even) .qa-ic{color:var(--teal-soft);}
+.more-ic{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:11px;background:radial-gradient(circle at 50% 40%,var(--glow),transparent 75%);color:var(--purple-soft);flex-shrink:0;}
+.more-ic .ic{filter:drop-shadow(0 0 5px var(--glow));}
+
+/* ============ MODALS / SHEETS ============ */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:none;
+  align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);
+}
+.overlay.active{display:flex;animation:fadeIn .25s;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.sheet{
+  background:var(--surface);width:100%;max-width:520px;border-radius:26px 26px 0 0;
+  padding:22px 20px calc(28px + env(safe-area-inset-bottom));max-height:88dvh;overflow-y:auto;
+  border-top:1px solid var(--border);animation:slideUp .32s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:none;}}
+.sheet-handle{width:42px;height:5px;border-radius:3px;background:var(--text-faint);opacity:.5;margin:0 auto 18px;}
+.sheet h3{font-size:19px;font-weight:700;margin-bottom:6px;}
+
+/* ============ FORMS ============ */
+input,textarea,select{
+  width:100%;padding:13px 15px;border-radius:13px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--text);font-family:inherit;font-size:15px;
+  margin-bottom:12px;transition:.2s;
+}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--purple-soft);box-shadow:0 0 0 3px var(--glow);}
+textarea{resize:vertical;min-height:90px;line-height:1.6;}
+label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:7px;}
+
+.pill{
+  display:inline-flex;align-items:center;padding:7px 13px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);font-size:12.5px;
+  font-weight:600;cursor:pointer;transition:.2s;color:var(--text-dim);
+}
+.pill.active{background:var(--purple);color:#fff;border-color:var(--purple);}
+.pill:active{transform:scale(.95);}
+.row{display:flex;gap:10px;flex-wrap:wrap;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+.empty{text-align:center;padding:50px 20px;color:var(--text-faint);}
+.empty .e-ico{font-size:46px;margin-bottom:14px;opacity:.6;}
+.toast{
+  position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:200;
+  background:var(--purple);color:#fff;padding:12px 22px;border-radius:30px;
+  font-size:14px;font-weight:600;box-shadow:0 6px 24px var(--glow);opacity:0;
+  transition:.3s;pointer-events:none;max-width:90%;text-align:center;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+/* Reading typography (ADHD-optimized) */
+.vtext{line-height:1.9;letter-spacing:0.03em;font-weight:300;}
+.vtext b{font-weight:700;color:var(--text);}
+.phrase{display:block;margin-bottom:7px;padding-left:2px;}
+.phrase:last-child{margin-bottom:0;}
+.lexword{
+  color:var(--lex);font-weight:600;cursor:pointer;border-bottom:1.5px dotted var(--lex);
+  padding-bottom:1px;transition:.15s;
+}
+.lexword:active{background:var(--surface2);border-radius:4px;}
+.verse-card{padding:16px 18px;}
+.cv-card *{user-select:none;}
+/* Format control bar */
+.fmt-bar{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 12px;margin-bottom:6px;-webkit-overflow-scrolling:touch;}
+.fmt-bar::-webkit-scrollbar{height:0;}
+.fmt-tog{flex:0 0 auto;padding:8px 12px;border-radius:11px;border:1px solid var(--border);background:var(--surface);color:var(--text-faint);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.15s;}
+.fmt-tog.on{background:var(--purple);color:#fff;border-color:var(--purple);}
+.fmt-tog:active{transform:scale(.94);}
+.help-dot{margin-left:6px;cursor:pointer;font-size:14px;}
+.say-btn{cursor:pointer;font-size:16px;opacity:.7;padding:2px 6px;border-radius:8px;transition:.15s;}
+.say-btn:active{background:var(--surface2);opacity:1;}
+#readRuler{position:absolute;left:0;right:0;height:44px;background:linear-gradient(var(--glow),transparent);border-top:2px solid var(--purple-soft);pointer-events:none;z-index:5;display:none;mix-blend-mode:screen;opacity:.55;}
+.hero-img{
+  width:100%;border-radius:18px;margin-bottom:14px;display:block;
+  background:linear-gradient(135deg,var(--surface2),var(--surface));
+  min-height:140px;max-height:230px;object-fit:cover;border:1px solid var(--border);
+}
+/* Logo hero: show the whole logo, centered, never cropped */
+.hero-logo{
+  width:100%;max-width:300px;margin:6px auto 16px;display:block;
+  max-height:240px;object-fit:contain;
+  filter:drop-shadow(0 6px 24px var(--glow));
+}
+.img-fallback{
+  width:100%;min-height:160px;max-height:200px;border-radius:18px;margin-bottom:14px;
+  background:linear-gradient(135deg,var(--purple),var(--teal));
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  color:rgba(255,255,255,0.85);font-size:13px;font-weight:600;padding:20px;
+  border:1px solid var(--border);
+}
+</style>
+</head>
+<body data-theme="night">
+<div id="app">
+
+  <!-- ============ HOME ============ -->
+  <div class="screen active" id="screen-home">
+    <div class="topbar">
+      <h1><span class="logo" id="topLogo"></span> FocusWord</h1>
+      <button class="iconbtn" onclick="openSettings()" data-ic="settings"></button>
+    </div>
+    <div class="pad">
+      <div id="heroSlot"></div>
+      <div style="text-align:center;margin:-4px 0 20px;">
+        <div id="heroSub" style="font-size:15px;font-weight:600;color:var(--purple-soft);min-height:22px;"></div>
+      </div>
+
+      <div class="card" style="border-color:var(--gold);">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;">✦ Verse of the Day</div>
+        <div id="votd" style="font-size:19px;line-height:1.7;font-weight:400;">Loading…</div>
+        <div id="votdRef" style="font-size:13px;color:var(--text-dim);margin-top:10px;font-weight:600;"></div>
+      </div>
+
+      <div class="row" style="margin-bottom:6px;">
+        <div class="card" style="flex:1;text-align:center;margin-bottom:0;padding:14px;">
+          <div style="font-size:26px;font-weight:800;color:var(--gold);" id="statStreak">0</div>
+          <div style="font-size:11px;color:var(--text-faint);font-weight:600;">🔥 Streak</div>
+        </div>
+        <div class="card" style="flex:1;text-align:center;margin-bottom:0;padding:14px;">
+          <div style="font-size:26px;font-weight:800;color:var(--teal-soft);" id="statChapters">0</div>
+          <div style="font-size:11px;color:var(--text-faint);font-weight:600;">📖 Chapters</div>
+        </div>
+        <div class="card" style="flex:1;text-align:center;margin-bottom:0;padding:14px;">
+          <div style="font-size:26px;font-weight:800;color:var(--purple-soft);" id="statSaved">0</div>
+          <div style="font-size:11px;color:var(--text-faint);font-weight:600;">🔖 Saved</div>
+        </div>
+      </div>
+
+      <div class="section-title">Today's Reading</div>
+      <div class="card tap" onclick="loadReading('John 1')">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:17px;font-weight:700;">📖 Continue Reading</div>
+            <div style="font-size:13px;color:var(--text-dim);margin-top:3px;" id="continueRef">John 1</div>
+          </div>
+          <div style="font-size:22px;color:var(--purple-soft);">→</div>
+        </div>
+      </div>
+
+      <div class="section-title">Why ADHD Makes Bible Reading Hard</div>
+      <div class="card" style="border-color:var(--teal);overflow:hidden;padding-top:0;padding-left:0;padding-right:0;">
+        <div id="wiredBanner"></div>
+        <div style="padding:0 18px;">
+        <div style="font-size:15px;line-height:1.7;color:var(--text-dim);">
+          The ADHD brain runs <b style="color:var(--text)">low on dopamine</b> — the chemical that powers focus and follow-through. Long blocks of unbroken text give your brain nothing to grab onto, so attention slips.
+        </div>
+        <div style="margin-top:12px;font-size:14px;line-height:1.7;color:var(--text-dim);">
+          FocusWord fixes this: <b style="color:var(--teal-soft)">short verse cards</b>, <b style="color:var(--purple-soft)">bold key words</b>, tappable definitions, and tiny wins that release dopamine and keep you going. <span style="color:var(--gold);font-weight:600;">This is the Bible, built for your brain.</span>
+        </div>
+        <button class="btn btn-teal btn-sm" style="margin-top:14px;" onclick="go('science')">Learn the science →</button>
+        </div>
+      </div>
+
+      <div class="section-title">Quick Access</div>
+      <div class="grid2">
+        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('read')" data-ic="read"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Read</div></div>
+        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('pray')" data-ic="pray"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Journal</div></div>
+        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('canvas')" data-ic="canvas"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Canvas</div></div>
+        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="openAI()" data-ic="ai"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">AI Study</div></div>
+        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('timer')" data-ic="timer"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Focus Timer</div></div>
+        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('science')" data-ic="brain"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Brain</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ READ ============ -->
+  <div class="screen" id="screen-read" style="position:relative;">
+    <div class="topbar">
+      <h1 style="font-size:19px;" id="readTitle">Read</h1>
+      <div style="display:flex;gap:8px;">
+        <button class="iconbtn" onclick="openLibrary()" data-ic="library"></button>
+        <button class="iconbtn" onclick="toggleReadMode()" id="modeBtn" data-ic="scroll"></button>
+      </div>
+    </div>
+    <div style="padding:0 14px 8px;display:flex;gap:8px;align-items:center;">
+      <select id="transSelect" style="margin-bottom:0;flex:0 0 100px;" onchange="reloadCurrent()">
+        <option value="kjv">KJV</option><option value="web">WEB</option><option value="asv">ASV</option>
+      </select>
+      <input id="refInput" placeholder="e.g. John 3 or Psalm 23" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')loadFromInput()">
+      <button class="iconbtn" onclick="loadFromInput()" style="flex-shrink:0;" data-ic="search"></button>
+    </div>
+    <div class="pad" id="readContent" style="padding-top:6px;"></div>
+  </div>
+
+  <!-- ============ PRAY / JOURNAL ============ -->
+  <div class="screen" id="screen-pray">
+    <div class="topbar">
+      <h1 style="font-size:19px;">🙏 Prayer Journal</h1>
+      <button class="iconbtn" onclick="openJournalEditor()" data-ic="plus"></button>
+    </div>
+    <div class="pad">
+      <div id="prayHeroSlot"></div>
+      <div class="row" id="journalFilters" style="margin-bottom:14px;"></div>
+      <div id="journalList"></div>
+    </div>
+  </div>
+
+  <!-- ============ CANVAS ============ -->
+  <div class="screen" id="screen-canvas">
+    <div class="topbar">
+      <h1 style="font-size:19px;">🎨 Study Canvas</h1>
+      <div style="display:flex;gap:8px;">
+        <button class="iconbtn" onclick="openCanvasMenu()" data-ic="menu"></button>
+      </div>
+    </div>
+    <div style="padding:0 14px 8px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="pill" onclick="addTextCard()">＋ Note</button>
+      <button class="pill" onclick="addVerseCard()">＋ Verse</button>
+      <button class="pill" id="drawPill" onclick="toggleDraw()">✏ Draw</button>
+      <button class="pill" id="connectPill" onclick="toggleConnect()">🔗 Connect</button>
+      <button class="pill" onclick="exportCanvas()">⬇ Export</button>
+    </div>
+    <div id="canvasName" style="padding:0 18px 6px;font-size:13px;color:var(--text-faint);font-weight:600;"></div>
+    <div id="canvasStage" style="flex:1;position:relative;overflow:hidden;margin:0 8px 8px;border-radius:16px;border:1px solid var(--border);background:var(--bg2);touch-action:none;">
+      <canvas id="drawLayer" style="position:absolute;inset:0;z-index:1;pointer-events:none;"></canvas>
+      <svg id="lineLayer" style="position:absolute;inset:0;z-index:2;pointer-events:none;width:100%;height:100%;"></svg>
+      <div id="cardLayer" style="position:absolute;inset:0;z-index:3;"></div>
+    </div>
+  </div>
+
+  <!-- ============ MORE ============ -->
+  <div class="screen" id="screen-more">
+    <div class="topbar"><h1 style="font-size:19px;">More</h1></div>
+    <div class="pad">
+      <div class="section-title">Grow</div>
+      <div id="moreGrow"></div>
+      <div class="section-title">Discover</div>
+      <div id="moreDiscover"></div>
+      <div class="section-title">Connect</div>
+      <div id="moreConnect"></div>
+      <div class="section-title">App</div>
+      <div id="moreApp"></div>
+      <div style="text-align:center;color:var(--text-faint);font-size:12px;margin-top:24px;">
+        FocusWord · Built for the ADHD & neurodivergent mind<br>“He has made everything beautiful in its time.”
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SUB SCREENS (loaded into #subScreen) ============ -->
+  <div class="screen" id="screen-sub">
+    <div class="topbar">
+      <button class="iconbtn" onclick="go('more')" data-ic="back"></button>
+      <h1 style="font-size:18px;" id="subTitle">Section</h1>
+      <div style="width:42px;"></div>
+    </div>
+    <div class="pad" id="subContent"></div>
+  </div>
+
+  <!-- ============ TAB BAR ============ -->
+  <nav class="tabbar">
+    <button class="tab active" data-tab="home" onclick="go('home')"><span class="ti" data-ic="home"></span>Home</button>
+    <button class="tab" data-tab="read" onclick="go('read')"><span class="ti" data-ic="read"></span>Read</button>
+    <button class="tab" data-tab="pray" onclick="go('pray')"><span class="ti" data-ic="pray"></span>Pray</button>
+    <button class="tab" data-tab="canvas" onclick="go('canvas')"><span class="ti" data-ic="canvas"></span>Canvas</button>
+    <button class="tab" data-tab="more" onclick="go('more')"><span class="ti" data-ic="more"></span>More</button>
+  </nav>
+</div>
+
+<!-- ============ OVERLAYS ============ -->
+<div class="overlay" id="sheetOverlay" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet" id="sheetBody"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+/* ============ LEXICON DATABASE (80+ words) ============ */
+const LEXICON = {
+"grace":{o:"charis (Greek)",d:"God's free, unearned kindness and favor toward people who don't deserve it.",c:"In the ancient world, charis meant a gift that created a bond between giver and receiver. God gives it freely with no strings of payment.",w:"It means you can't earn your way to God — He reaches out first."},
+"faith":{o:"pistis (Greek)",d:"Trusting God and acting on that trust, even when you can't see the outcome.",c:"More than belief in your head — it meant loyalty and reliance, like trusting someone to catch you.",w:"Faith is the doorway to a relationship with God, not a test you pass."},
+"repentance":{o:"metanoia (Greek)",d:"A complete change of mind and direction — turning away from one path toward God.",c:"Literally 'changing your mind,' like a soldier doing an about-face.",w:"It's not just feeling sorry — it's choosing a new direction."},
+"salvation":{o:"soteria (Greek) / yeshua (Hebrew)",d:"Being rescued and made whole — saved from sin, death, and separation from God.",c:"Used for being rescued from danger, healed, or set free from slavery.",w:"God's rescue isn't earned; it's received."},
+"sanctification":{o:"hagiasmos (Greek)",d:"The lifelong process of being made holy and more like Jesus.",c:"To 'set apart' something for a special, sacred purpose.",w:"You're a work in progress — growth, not perfection, is the goal."},
+"justification":{o:"dikaiosis (Greek)",d:"Being declared 'not guilty' and right before God because of Jesus.",c:"A legal courtroom word — the judge's verdict of innocence.",w:"God sees you as righteous because of Christ, not your performance."},
+"atonement":{o:"kaphar (Hebrew)",d:"The covering or removal of sin that restores relationship with God.",c:"Means 'to cover' — like covering a debt so it's wiped clean.",w:"Jesus paid what you couldn't, closing the gap between you and God."},
+"covenant":{o:"berith (Hebrew) / diatheke (Greek)",d:"A binding, sacred promise and relationship between God and people.",c:"Ancient covenants were sealed with blood and were unbreakable bonds.",w:"God binds Himself to you with a promise He won't break."},
+"redemption":{o:"apolutrosis (Greek)",d:"Being bought back and set free, like a slave purchased into freedom.",c:"The price paid to free a slave or prisoner.",w:"You were bought at a price — you belong to God now, and you're free."},
+"righteousness":{o:"tsedeq (Hebrew) / dikaiosyne (Greek)",d:"Being right with God and living rightly toward others.",c:"Carried the idea of justice, fairness, and right relationships.",w:"It's about restored relationship, not flawless rule-keeping."},
+"propitiation":{o:"hilasmos (Greek)",d:"The act that satisfies God's justice and turns away His wrath against sin.",c:"Related to the 'mercy seat' where atonement was made in the temple.",w:"Jesus absorbed what sin deserved so you don't have to."},
+"reconciliation":{o:"katallage (Greek)",d:"Restoring a broken relationship — enemies becoming friends again.",c:"Used for settling disputes and ending hostility.",w:"God isn't your enemy; through Christ the relationship is repaired."},
+"glorification":{o:"doxazo (Greek)",d:"The final stage when believers are fully transformed and perfected with God.",c:"To give weight, honor, and radiant splendor to something.",w:"The story ends with you whole, healed, and home."},
+"predestination":{o:"proorizo (Greek)",d:"God's purposeful plan set in advance for those who are His.",c:"To 'mark out a boundary beforehand' — to plan ahead.",w:"You were on God's mind before you existed."},
+"sovereignty":{o:"(theological)",d:"God's complete authority and rule over everything.",c:"Drawn from royal kingship — the King who reigns over all.",w:"Nothing in your life is outside God's reach or care."},
+"trinity":{o:"(theological term)",d:"One God in three persons: Father, Son, and Holy Spirit.",c:"Not in the Bible by name, but describes a pattern seen throughout it.",w:"God is relationship at His very core."},
+"incarnation":{o:"(from Latin 'in flesh')",d:"God becoming human in Jesus Christ.",c:"'The Word became flesh' — God entering His own creation.",w:"God didn't stay distant; He stepped into your world."},
+"resurrection":{o:"anastasis (Greek)",d:"Rising from the dead — Jesus' return to life, and the promise for believers.",c:"Means 'a standing up again,' a literal rising.",w:"Death isn't the end of the story."},
+"ascension":{o:"(from Latin 'to climb')",d:"Jesus returning to heaven 40 days after rising.",c:"A king taking his throne after victory.",w:"Jesus reigns now and prays for you."},
+"intercession":{o:"entugchano (Greek)",d:"Praying or pleading on behalf of someone else.",c:"To approach a king to make a request for another.",w:"Jesus speaks to the Father on your behalf right now."},
+"sabbath":{o:"shabbat (Hebrew)",d:"A weekly day of rest and worship, modeled on God resting after creation.",c:"Means 'to cease' — a built-in rhythm of rest.",w:"Rest is a gift and a command, not laziness."},
+"pharisee":{o:"(Hebrew, 'separated ones')",d:"A strict religious group focused on detailed law-keeping.",c:"Respected teachers, but often criticized by Jesus for hollow rule-following.",w:"Religion without heart misses the point."},
+"sadducee":{o:"(possibly from priest Zadok)",d:"A wealthy priestly group who rejected resurrection and the afterlife.",c:"Controlled the temple; rivals of the Pharisees.",w:"Shows the divided beliefs of Jesus' day."},
+"synagogue":{o:"synagoge (Greek)",d:"A local Jewish gathering place for prayer and Scripture.",c:"Means 'gathering together' — the community hub.",w:"Faith was always meant to be shared in community."},
+"torah":{o:"torah (Hebrew)",d:"The first five books of the Bible and God's instruction.",c:"Means 'teaching' or 'instruction,' not just 'law.'",w:"God's guidance is a gift, not a burden."},
+"messiah":{o:"mashiach (Hebrew)",d:"The promised anointed deliverer — fulfilled in Jesus.",c:"Means 'anointed one,' marked out by God for a mission.",w:"The rescuer the world waited for has come."},
+"christ":{o:"christos (Greek)",d:"The Greek word for Messiah — 'the Anointed One.'",c:"A title, not a last name: 'Jesus the Christ.'",w:"It declares who Jesus is — the chosen King."},
+"gospel":{o:"euangelion (Greek)",d:"The 'good news' that Jesus saves and reigns.",c:"Used for announcing a military victory or a new king.",w:"It's an announcement of good news, not a list of demands."},
+"epistle":{o:"epistole (Greek)",d:"A letter — many New Testament books are letters to churches.",c:"Formal letters carried by trusted messengers.",w:"Much of the Bible is personal mail written to real people."},
+"apostle":{o:"apostolos (Greek)",d:"One 'sent out' with authority — Jesus' core messengers.",c:"An official envoy representing the one who sent them.",w:"Ordinary people sent to do extraordinary things."},
+"prophet":{o:"nabi (Hebrew)",d:"One who speaks God's message to the people.",c:"A spokesperson, not mainly a fortune-teller.",w:"God communicates; He doesn't leave us guessing."},
+"priest":{o:"kohen (Hebrew)",d:"One who represents people before God through sacrifice and prayer.",c:"The bridge between God and people in temple worship.",w:"Jesus is now your perfect priest — direct access to God."},
+"tabernacle":{o:"mishkan (Hebrew)",d:"The portable tent where God's presence dwelt with Israel.",c:"A movable sanctuary for a traveling people.",w:"God chose to live among His people, on the move with them."},
+"temple":{o:"hekal (Hebrew)",d:"The permanent house of worship in Jerusalem.",c:"The center of Jewish worship and sacrifice.",w:"Now your body is called God's temple — He lives in you."},
+"ark":{o:"aron (Hebrew)",d:"The sacred chest holding the Ten Commandments; symbol of God's presence.",c:"A gold-covered box carried by priests; deeply holy.",w:"A reminder God keeps His promises with His people."},
+"manna":{o:"man (Hebrew)",d:"The miracle bread God provided daily in the wilderness.",c:"Means 'what is it?' — the question Israel asked seeing it.",w:"God provides what you need, one day at a time."},
+"pentecost":{o:"pentekoste (Greek, 'fiftieth')",d:"The day the Holy Spirit filled the first believers.",c:"A harvest festival 50 days after Passover.",w:"God's Spirit is given to ordinary believers — including you."},
+"baptism":{o:"baptizo (Greek)",d:"Being immersed in water as a public sign of new life in Christ.",c:"Means 'to dip or immerse'; a symbol of death and rebirth.",w:"A visible 'before and after' of a changed life."},
+"communion":{o:"koinonia (Greek)",d:"Sharing bread and cup to remember Jesus' sacrifice.",c:"Means 'fellowship' or 'sharing in common.'",w:"A regular reminder of what Jesus did for you."},
+"eucharist":{o:"eucharistia (Greek)",d:"Another name for communion, meaning 'thanksgiving.'",c:"Jesus 'gave thanks' before breaking the bread.",w:"Remembering naturally leads to gratitude."},
+"parable":{o:"parabole (Greek)",d:"A short story Jesus used to teach a deeper truth.",c:"Means 'to throw alongside' — comparing everyday life to spiritual truth.",w:"Truth told as story sticks — great for the ADHD mind."},
+"miracle":{o:"semeion (Greek, 'sign')",d:"A powerful act of God beyond natural explanation.",c:"Called 'signs' because they point to who God is.",w:"They're arrows pointing to God, not just magic tricks."},
+"disciple":{o:"mathetes (Greek)",d:"A learner and follower who patterns life after a teacher.",c:"Students lived with their teacher, copying their whole way of life.",w:"Following Jesus is learning by walking with Him."},
+"martyr":{o:"martys (Greek)",d:"One who dies for their faith.",c:"Means 'witness' — their death testified to what they believed.",w:"Some loved God more than life itself."},
+"heresy":{o:"hairesis (Greek)",d:"A false teaching that distorts core truth.",c:"Originally meant a 'faction' or chosen opinion.",w:"Truth matters; not all teaching is trustworthy."},
+"canon":{o:"kanon (Greek)",d:"The official collection of books recognized as Scripture.",c:"Means 'measuring rod' — the standard or rule.",w:"The Bible's 66 books were carefully recognized, not randomly picked."},
+"apocrypha":{o:"apokryphos (Greek, 'hidden')",d:"Books some traditions include between the testaments.",c:"Valued by some, not in the Protestant canon.",w:"Helps explain different Bible editions."},
+"selah":{o:"selah (Hebrew)",d:"A pause in the Psalms — likely 'stop and reflect.'",c:"A musical or meditative break.",w:"A built-in reminder to slow down and absorb."},
+"amen":{o:"amen (Hebrew)",d:"'So be it' — agreement and affirmation.",c:"From a root meaning firm, faithful, true.",w:"Saying it means you truly mean it."},
+"hallelujah":{o:"hallelu-yah (Hebrew)",d:"'Praise the Lord' — a shout of worship.",c:"A command to praise, addressed to everyone.",w:"Praise lifts your spirit and your focus toward God."},
+"hosanna":{o:"hoshia-na (Hebrew)",d:"'Save now!' — a cry shouted to Jesus as King.",c:"Both a plea for rescue and a shout of praise.",w:"It's okay to cry out to God for help."},
+"maranatha":{o:"marana tha (Aramaic)",d:"'Our Lord, come!' — an early Christian prayer.",c:"One of the oldest Christian sayings preserved.",w:"Longing for Jesus is part of faith."},
+"abba":{o:"abba (Aramaic)",d:"An intimate word for father — like 'Papa' or 'Daddy.'",c:"A tender, family word, not formal.",w:"You can approach God as a loving parent."},
+"logos":{o:"logos (Greek)",d:"'The Word' — a title for Jesus as God's self-expression.",c:"Greek thinkers used it for the rational order of the universe.",w:"Jesus is how God speaks Himself to us."},
+"agape":{o:"agape (Greek)",d:"Selfless, unconditional love that gives without expecting return.",c:"The highest of the Greek words for love.",w:"This is how God loves you — fully and freely."},
+"eros":{o:"eros (Greek)",d:"Romantic, passionate love.",c:"One of several Greek words distinguishing kinds of love.",w:"The Bible honors love in its proper place."},
+"phileo":{o:"phileo (Greek)",d:"Warm friendship and affection between people.",c:"The root of 'Philadelphia' — brotherly love.",w:"God cares about your friendships too."},
+"storge":{o:"storge (Greek)",d:"Natural family affection, like parent and child.",c:"The quiet, everyday love of a household.",w:"Ordinary family love is a gift from God."},
+"shalom":{o:"shalom (Hebrew)",d:"Deep peace, wholeness, and well-being — not just absence of conflict.",c:"A greeting wishing total flourishing.",w:"God's peace is fullness, not just calm."},
+"hesed":{o:"hesed (Hebrew)",d:"God's loyal, steadfast, never-quitting love.",c:"Often translated 'lovingkindness' or 'mercy.'",w:"God's love for you doesn't run out."},
+"emet":{o:"emet (Hebrew)",d:"Truth, faithfulness, and reliability.",c:"Built on a root meaning firm and dependable.",w:"God is rock-solid and can be trusted."},
+"ruach":{o:"ruach (Hebrew)",d:"Spirit, breath, or wind — used for the Spirit of God.",c:"The same word for breath and wind shows life-giving power.",w:"God's Spirit breathes life into you."},
+"nephesh":{o:"nephesh (Hebrew)",d:"The living soul or whole person — your inner self.",c:"Means the breathing, living being, not just a part.",w:"God cares about all of you, body and soul."},
+"sheol":{o:"sheol (Hebrew)",d:"The Old Testament place of the dead.",c:"A shadowy realm where the dead were thought to rest.",w:"Shows how the Bible's view of the afterlife unfolds."},
+"gehenna":{o:"gehenna (Greek/Hebrew)",d:"A vivid image for final judgment.",c:"Named after a valley outside Jerusalem associated with burning.",w:"A sober reminder that choices matter eternally."},
+"hades":{o:"hades (Greek)",d:"The New Testament word for the realm of the dead.",c:"Borrowed from Greek thought for the unseen world.",w:"Death is real, but not the final word for believers."},
+"paradise":{o:"paradeisos (Greek)",d:"A place of blessing and God's presence — like a garden.",c:"A Persian word for a walled royal garden.",w:"Jesus promised paradise to the thief beside Him."},
+"heaven":{o:"shamayim (Hebrew) / ouranos (Greek)",d:"God's dwelling and the future home of His people.",c:"Often pictured as the sky and beyond.",w:"There's a home prepared for you."},
+"hell":{o:"(various: gehenna, hades)",d:"Final separation from God.",c:"Described with images of fire, darkness, and loss.",w:"God's love includes warning, because He doesn't want anyone lost."},
+"satan":{o:"satan (Hebrew, 'accuser')",d:"The adversary who opposes God and accuses people.",c:"Means 'accuser' or 'adversary' in a courtroom sense.",w:"You have an enemy — but he's already defeated."},
+"demon":{o:"daimonion (Greek)",d:"An evil spirit opposed to God.",c:"Fallen spiritual beings under Satan.",w:"The spiritual world is real, but God is far stronger."},
+"angel":{o:"malak (Hebrew) / angelos (Greek)",d:"A messenger and servant of God.",c:"Means simply 'messenger' — God's agents.",w:"God sends help you may never see."},
+"seraph":{o:"saraph (Hebrew, 'burning ones')",d:"A high order of angel that worships before God.",c:"Pictured with six wings, crying 'Holy, holy, holy.'",w:"Worship is happening around God's throne right now."},
+"cherub":{o:"kerub (Hebrew)",d:"A powerful angelic being guarding God's holiness.",c:"Depicted guarding Eden and the ark — not chubby babies.",w:"God's presence is holy and guarded."},
+"cubit":{o:"ammah (Hebrew)",d:"An ancient measure — about 18 inches (forearm length).",c:"Measured from elbow to fingertip.",w:"Helps you picture sizes in Bible stories."},
+"talent":{o:"talanton (Greek)",d:"A huge sum of money or weight.",c:"Worth many years of wages — a fortune.",w:"Shows the scale of grace and responsibility in Jesus' stories."},
+"denarius":{o:"denarius (Latin)",d:"A day's wage for a laborer.",c:"A standard Roman silver coin.",w:"Grounds Jesus' parables in real working life."},
+"sanhedrin":{o:"synedrion (Greek)",d:"The Jewish high council and supreme court.",c:"70 elders plus the high priest.",w:"The body that put Jesus on trial."},
+"centurion":{o:"kentyrion (Greek/Latin)",d:"A Roman officer over about 100 soldiers.",c:"Respected, disciplined military leaders.",w:"Several showed surprising faith in Jesus."},
+"gentile":{o:"goyim (Hebrew) / ethnos (Greek)",d:"Anyone who isn't Jewish — the nations.",c:"Marked the divide God's gospel later crossed.",w:"The good news is for everyone — including you."},
+"jew":{o:"yehudi (Hebrew)",d:"A descendant of Judah and the people of Israel.",c:"God's covenant people through whom the Messiah came.",w:"Salvation came into the world through Israel."},
+"hebrew":{o:"ivri (Hebrew)",d:"The people and language of Israel.",c:"An early name for Abraham's descendants.",w:"The roots of your faith run deep in history."},
+"israel":{o:"yisrael (Hebrew, 'wrestles with God')",d:"The name God gave Jacob, and his descendants.",c:"Means 'one who struggles with God' — and still belongs.",w:"Wrestling with faith is part of the journey."},
+"zion":{o:"tsiyon (Hebrew)",d:"Jerusalem, and a symbol of God's city and people.",c:"Originally a hill in Jerusalem; later a symbol of God's kingdom.",w:"A picture of the home God is preparing."},
+"promised land":{o:"(Canaan)",d:"The land God pledged to give His people.",c:"A symbol of God keeping long-awaited promises.",w:"God's promises arrive, even if the wait is long."},
+"prayer":{o:"proseuche (Greek) / tefilah (Hebrew)",d:"Talking honestly with God.",c:"Ranged from formal worship to raw cries for help.",w:"You don't need fancy words — just honesty."},
+"worship":{o:"proskuneo (Greek)",d:"Honoring God with awe, love, and surrender.",c:"Means to bow down — body language of the heart.",w:"Worship realigns your focus onto God."},
+"holy":{o:"qadosh (Hebrew)",d:"Set apart, pure, and utterly different from anything else.",c:"To be sacred and dedicated to God.",w:"God is pure and good — and invites you to belong to Him."},
+"spirit":{o:"ruach (Hebrew) / pneuma (Greek)",d:"The Holy Spirit, God's active presence in the world and in believers.",c:"Same word as breath and wind — invisible but powerful.",w:"God's Spirit lives in and guides believers."},
+"mercy":{o:"eleos (Greek) / racham (Hebrew)",d:"Compassion that withholds punishment and offers help.",c:"Racham is related to a mother's deep love for her child.",w:"God treats you with tenderness, not just rules."},
+"truth":{o:"aletheia (Greek)",d:"What is real and trustworthy — reality as God sees it.",c:"Means 'unhidden' — reality brought into the light.",w:"God wants you to live in what's real, not illusions."},
+"hope":{o:"elpis (Greek)",d:"Confident expectation of good that God has promised.",c:"Not wishful thinking — a settled certainty.",w:"Hope gives the ADHD mind something solid to anchor to."},
+"covenant ":{o:"berith (Hebrew)",d:"A sacred binding promise between God and people.",c:"Sealed and unbreakable in the ancient world.",w:"God commits Himself to you."}
+};
+</script>
+<script>
+/* ============ STATE & STORAGE ============ */
+const DB = {
+  get(k,def){ try{ const v=localStorage.getItem('fw_'+k); return v?JSON.parse(v):def; }catch(e){ return def; } },
+  set(k,v){ try{ localStorage.setItem('fw_'+k,JSON.stringify(v)); }catch(e){} }
+};
+let state = {
+  theme: DB.get('theme','night'),
+  trans: DB.get('trans','kjv'),
+  readMode: DB.get('readMode','scroll'),
+  streak: DB.get('streak',0),
+  lastRead: DB.get('lastRead',null),
+  chapters: DB.get('chapters',0),
+  bookmarks: DB.get('bookmarks',[]),
+  highlights: DB.get('highlights',{}),
+  journal: DB.get('journal',[]),
+  canvases: DB.get('canvases',[]),
+  activeCanvas: DB.get('activeCanvas',null),
+  geminiKey: DB.get('geminiKey',''),
+  planProgress: DB.get('planProgress',{}),
+  readHistory: DB.get('readHistory',{}),
+  currentRef: 'John 1'
+};
+function save(){
+  DB.set('theme',state.theme); DB.set('trans',state.trans); DB.set('readMode',state.readMode);
+  DB.set('streak',state.streak); DB.set('lastRead',state.lastRead); DB.set('chapters',state.chapters);
+  DB.set('bookmarks',state.bookmarks); DB.set('highlights',state.highlights); DB.set('journal',state.journal);
+  DB.set('canvases',state.canvases); DB.set('activeCanvas',state.activeCanvas); DB.set('geminiKey',state.geminiKey);
+  DB.set('planProgress',state.planProgress); DB.set('readHistory',state.readHistory);
+}
+
+/* ============ UI HELPERS ============ */
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function openSheet(html){ document.getElementById('sheetBody').innerHTML='<div class="sheet-handle"></div>'+html; document.getElementById('sheetOverlay').classList.add('active'); }
+function closeSheet(){ document.getElementById('sheetOverlay').classList.remove('active'); }
+
+/* ============ THEME ============ */
+function setTheme(t){ state.theme=t; document.body.setAttribute('data-theme',t); document.querySelector('meta[name=theme-color]').setAttribute('content', getComputedStyle(document.body).getPropertyValue('--bg').trim()); save(); }
+
+/* ============ NAVIGATION ============ */
+function go(tab){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(['home','read','pray','canvas','more'].includes(tab)){
+    document.getElementById('screen-'+tab).classList.add('active');
+    const tb=document.querySelector('.tab[data-tab="'+tab+'"]'); if(tb)tb.classList.add('active');
+    if(tab==='read') renderRead();
+    if(tab==='pray') renderJournal();
+    if(tab==='canvas') initCanvas();
+    if(tab==='more') renderMore();
+    if(tab==='home') renderHome();
+  } else {
+    // sub screen
+    document.getElementById('screen-sub').classList.add('active');
+    document.querySelector('.tab[data-tab="more"]').classList.add('active');
+    renderSub(tab);
+  }
+  document.querySelector('.screen.active').scrollTop=0;
+}
+
+/* ============ STREAK LOGIC ============ */
+function markRead(){
+  const today=new Date().toISOString().slice(0,10);
+  if(state.lastRead===today) return;
+  const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+  state.streak = (state.lastRead===yesterday)? state.streak+1 : 1;
+  state.lastRead=today;
+  state.readHistory[today]=(state.readHistory[today]||0)+1;
+  save();
+}
+
+/* ============ HERO SUBTITLE ANIMATION ============ */
+function animateSub(){
+  const el=document.getElementById('heroSub'); if(!el) return;
+  const text="God Supercharging the ADHD Mind for Purpose";
+  let i=0; el.textContent='';
+  const tick=()=>{ if(i<=text.length){ el.textContent=text.slice(0,i); i++; setTimeout(tick,38); } };
+  tick();
+}
+
+/* ============ IMAGE SLOT (with graceful fallback) ============ */
+/* ============ CUSTOM SVG ICON SET (neon outline) ============ */
+const ICONS={
+home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9.5 20v-6h5v6"/>',
+read:'<path d="M12 6c-2-1.4-5-2-8-1.5V19c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V4.5C17 4 14 4.6 12 6Z"/><path d="M12 6v14.5"/>',
+pray:'<path d="M12 3c-1 2-3 3.5-5 4.5v6c0 4 3 6.5 5 7.5 2-1 5-3.5 5-7.5v-6c-2-1-4-2.5-5-4.5Z"/><path d="M12 8v6"/><path d="M9.5 11h5"/>',
+canvas:'<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l4.5-4 3.5 3 4-4.5 4 5"/>',
+more:'<circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/>',
+settings:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7 5.6 5.6"/>',
+library:'<rect x="4" y="3.5" width="4" height="17" rx="1"/><rect x="10" y="3.5" width="4" height="17" rx="1"/><path d="M16.5 4.5l3.5 1-3 16-3.5-1"/>',
+scroll:'<path d="M6 4h10a2 2 0 0 1 2 2v12a2 2 0 0 0 2 2H8a2 2 0 0 1-2-2V4Z"/><path d="M6 4a2 2 0 0 0-2 2v2h2"/><path d="M9 9h6M9 12h6M9 15h3"/>',
+cards:'<rect x="6" y="3.5" width="12" height="17" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+search:'<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+plus:'<path d="M12 5v14M5 12h14"/>',
+menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+back:'<path d="M14 6l-6 6 6 6"/>',
+speaker:'<path d="M5 9v6h3l5 4V5L8 9H5Z"/><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10"/>',
+timer:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9M9.5 2.5h5M12 6v0"/>',
+ai:'<path d="M12 4l1.8 4.4L18 10l-4.2 1.6L12 16l-1.8-4.4L6 10l4.2-1.6L12 4Z"/><path d="M19 16l.8 2 .2.8 2 .2-2 .8-.2 2-.8-2-2-.2 2-.8Z"/>',
+progress:'<path d="M4 19V5M4 19h16"/><path d="M8 19v-5M12 19V9M16 19v-8M20 19V7"/>',
+plans:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M9 3v4M15 3v4"/><path d="M8.5 14l2 2 4-4"/>',
+bookmark:'<path d="M7 4h10v16l-5-3.5L7 20V4Z"/>',
+brain:'<path d="M12 5.5c-1.5-1.8-5-1.5-5 1.5-2 .3-2.5 3-1 4.2-1 1.5 0 3.8 2.5 3.8.3 1.8 3.5 1.8 3.5-.5"/><path d="M12 5.5c1.5-1.8 5-1.5 5 1.5 2 .3 2.5 3 1 4.2 1 1.5 0 3.8-2.5 3.8-.3 1.8-3.5 1.8-3.5-.5"/><path d="M12 5.5v13"/>',
+cross:'<path d="M10 3h4v6h6v4h-6v8h-4v-8H4V9h6V3Z"/>',
+people:'<circle cx="8.5" cy="9" r="3"/><path d="M3 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M15 15.5c2.5-.3 6 1 6 4.5"/>',
+video:'<rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="M10 9.5l5 2.5-5 2.5V9.5Z"/>',
+data:'<ellipse cx="12" cy="6" rx="7" ry="2.8"/><path d="M5 6v12c0 1.5 3 2.8 7 2.8s7-1.3 7-2.8V6"/><path d="M5 12c0 1.5 3 2.8 7 2.8s7-1.3 7-2.8"/>',
+share:'<circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="6" r="2.5"/><circle cx="17.5" cy="18" r="2.5"/><path d="M8.7 10.8l6.6-3.6M8.7 13.2l6.6 3.6"/>',
+arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
+};
+function ICON(name,size){
+  const s=size||24;
+  return `<svg class="ic" viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||ICONS.more}</svg>`;
+}
+function imgSlot(src,label){
+  return `<img class="hero-img" src="${src}" alt="${label}" loading="lazy"
+    onerror="this.outerHTML='<div class=&quot;img-fallback&quot;>🖼️<br>'+this.alt+'<br><span style=&quot;opacity:.7;font-weight:400&quot;>(add '+'${src}'+' to GitHub)</span></div>'">`;
+}
+function logoSlot(src,label){
+  return `<img class="hero-logo" src="${src}" alt="${label}" loading="lazy"
+    onerror="this.outerHTML='<div class=&quot;img-fallback&quot;>✝<br>'+this.alt+'</div>'">`;
+}
+</script>
+<script>
+/* ============ BIBLE BOOKS ============ */
+const BIBLE_BOOKS = {
+"Old Testament":["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua","Judges","Ruth","1 Samuel","2 Samuel","1 Kings","2 Kings","1 Chronicles","2 Chronicles","Ezra","Nehemiah","Esther","Job","Psalms","Proverbs","Ecclesiastes","Song of Solomon","Isaiah","Jeremiah","Lamentations","Ezekiel","Daniel","Hosea","Joel","Amos","Obadiah","Jonah","Micah","Nahum","Habakkuk","Zephaniah","Haggai","Zechariah","Malachi"],
+"New Testament":["Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians","Galatians","Ephesians","Philippians","Colossians","1 Thessalonians","2 Thessalonians","1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter","1 John","2 John","3 John","Jude","Revelation"]
+};
+
+/* ADHD bold anchor words */
+const KEYWORDS = ["Lord","God","grace","love","faith","peace","hope","strength","trust","mercy","truth","light","life","power","glory","righteousness","salvation","eternal","covenant","holy","spirit","prayer","worship","praise","forgive","redeem","kingdom","wisdom","fear","joy","heart","soul","mind"];
+/* Sort lexicon keys longest-first so multi-word terms match first */
+const LEX_KEYS = Object.keys(LEXICON).map(k=>k.trim()).filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>b.length-a.length);
+
+let bibleCache={};
+
+/* ===== ADHD READING SETTINGS (user-controllable) ===== */
+state.fmt = DB.get('fmt', { chunk:true, bold:true, lexicon:true, simplify:true, ruler:false, size:19 });
+function saveFmt(){ DB.set('fmt', state.fmt); }
+
+/* -------------------------------------------------------------
+   HEAVY ADHD REFORMATTER
+   1) Phrase-chunking: split a verse at natural pauses so each
+      idea sits on its own line (lowers working-memory load —
+      the core of "chunking", a proven neurodivergent method).
+   2) Bold anchor words give the eye landing spots.
+   3) Lexicon words become tappable teal cues.
+   ------------------------------------------------------------- */
+function applyInline(text){
+  let placeholders=[];
+  if(state.fmt.lexicon){
+    LEX_KEYS.forEach(word=>{
+      const re=new RegExp('\\b('+word.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')+')\\b','gi');
+      text=text.replace(re,(m)=>{
+        if(/LEXPH\d/.test(m)) return m;
+        const id='LEXPH'+placeholders.length;
+        placeholders.push(`<span class="lexword" onclick="event.stopPropagation();showLexicon('${word.toLowerCase()}')">${m}</span>`);
+        return id;
+      });
+    });
+  }
+  if(state.fmt.bold){
+    KEYWORDS.forEach(word=>{
+      const re=new RegExp('\\b('+word+')\\b','g');
+      text=text.replace(re,(m)=> m.includes('LEXPH')?m:`<b>${m}</b>`);
+    });
+  }
+  placeholders.forEach((html,i)=>{ text=text.replace('LEXPH'+i,html); });
+  return text;
+}
+
+function chunkPhrases(text){
+  // Break at sentence ends and natural pause points, keeping the punctuation.
+  // Split after . ! ? ; : and after commas that precede a conjunction.
+  let t = text
+    .replace(/([.!?;:])\s+/g, '$1\n')
+    .replace(/,\s+(and|but|or|for|so|because|that|which|who|when|then|therefore|yet)\b/gi, ',\n$1');
+  const lines = t.split('\n').map(s=>s.trim()).filter(Boolean);
+  return lines;
+}
+
+/* Render one verse's text as ADHD-formatted HTML */
+function formatVerse(rawText){
+  const text = esc(rawText.trim());
+  if(!state.fmt.chunk){
+    return `<span class="phrase">${applyInline(text)}</span>`;
+  }
+  const lines = chunkPhrases(text);
+  return lines.map(l=>`<span class="phrase">${applyInline(l)}</span>`).join('');
+}
+
+/* ===== READ-ALOUD (text-to-speech) — big focus aid ===== */
+let _speaking=false;
+function speakText(txt,btn){
+  if(!('speechSynthesis' in window)){ toast('Read-aloud not supported on this device'); return; }
+  if(_speaking){ window.speechSynthesis.cancel(); _speaking=false; if(btn)btn.textContent='🔊'; return; }
+  const u=new SpeechSynthesisUtterance(txt.replace(/<[^>]+>/g,''));
+  u.rate=0.92; u.pitch=1;
+  u.onend=()=>{ _speaking=false; if(btn)btn.textContent='🔊'; };
+  _speaking=true; if(btn)btn.textContent='⏹';
+  window.speechSynthesis.speak(u);
+}
+function stopSpeak(){ if('speechSynthesis' in window){ window.speechSynthesis.cancel(); _speaking=false; } }
+
+/* =============================================================
+   PLAIN-ENGLISH HELPER NOTES  (going heavy)
+   Keyed by "Book Chapter:Verse". When a verse has a note, a small
+   💡 appears; tapping shows a plain-language paraphrase + meaning.
+   Written to lower reading load for ADHD / autistic minds.
+   ============================================================= */
+const HELPERS = {
+"John 1:1":"Before anything existed, Jesus already was. 'The Word' means Jesus — He IS God, not separate from Him.",
+"John 1:3":"Everything that exists was made through Jesus. Nothing got made without Him.",
+"John 1:4":"Jesus is the source of life, and that life lights up people in the dark.",
+"John 1:5":"The darkness has tried to put out this light — and failed. It can't win.",
+"John 1:12":"Anyone who accepts Jesus gets adopted into God's family. You become His child.",
+"John 1:14":"God didn't stay far away. He became a real human (Jesus) and lived right among people.",
+"John 3:3":"Jesus says you need a fresh start so deep it's like being born all over again.",
+"John 3:7":"Don't be shocked — everyone needs this new spiritual birth, no exceptions.",
+"John 3:16":"This is the whole message in one line: God loves you so much He gave His Son, so trusting Jesus gives you forever-life.",
+"John 3:17":"Jesus didn't come to condemn you. He came to rescue you.",
+"John 14:1":"Jesus is saying: stop letting your heart panic. Trust Me.",
+"John 14:2":"There's a real place being prepared for you. You're expected. You belong.",
+"John 14:6":"Jesus is the way to God — not one option among many, but THE path, and He's trustworthy and alive.",
+"John 14:27":"Jesus gives a peace the world can't give or take away. So your heart doesn't have to be afraid.",
+"Psalm 23:1":"God is your shepherd — He guides and provides. With Him, you're not lacking what you truly need.",
+"Psalm 23:2":"He makes you slow down and rest. Rest isn't laziness; it's part of the plan.",
+"Psalm 23:3":"When you're empty, He refills your soul and points you the right way.",
+"Psalm 23:4":"Even in the darkest, scariest valley, you're not alone — God is right there with you.",
+"Psalm 23:5":"God treats you like an honored guest, even when enemies are watching. He blesses you out in the open.",
+"Psalm 23:6":"Goodness and love are chasing after you your whole life. And home with God is forever.",
+"Psalm 46:10":"'Be still' means stop striving and panicking. Pause. Remember God is God — and you're not, and that's good news.",
+"Psalm 91:1":"If you stay close to God, you're living under His protection, like shelter in a storm.",
+"Psalm 91:4":"God covers and shields you the way a bird shelters its chicks under its wings. Safe.",
+"Psalm 139:14":"You were made on purpose, with incredible care. You are not a mistake or an accident.",
+"Psalm 139:16":"God saw you before you were even born and knew all your days. Your life has a design.",
+"Psalm 34:18":"When your heart is shattered, God is closest — not distant. He's near the brokenhearted.",
+"Psalm 51:10":"A prayer asking God to reset your heart and give you a fresh, clean start inside.",
+"Psalm 27:1":"If God is your light and protector, what's left to be terrified of? He's got you.",
+"Psalm 42:11":"The writer talks to his own sad heart: 'Why so down? Put your hope in God — better is coming.'",
+"Philippians 4:6":"Instead of drowning in worry, talk to God about it — every detail — and add thanks.",
+"Philippians 4:7":"When you do that, God gives a peace that doesn't even make logical sense. It guards your mind.",
+"Philippians 4:8":"Train your brain to land on good, true, beautiful things — not the spiral. What you feed grows.",
+"Philippians 4:13":"With Christ giving you strength, you can get through whatever's in front of you.",
+"Philippians 4:19":"God will supply what you actually need. He's not going to run out.",
+"Romans 8:1":"If you belong to Jesus, the guilty verdict is GONE. No more condemnation hanging over you.",
+"Romans 8:18":"Whatever you're suffering now is real — but it's tiny next to the glory coming.",
+"Romans 8:26":"When you don't even know how to pray, God's Spirit prays for you. You're covered.",
+"Romans 8:28":"God can weave even the bad stuff into good for those who love Him. Nothing is wasted.",
+"Romans 8:31":"If God is on your side, it doesn't ultimately matter who's against you.",
+"Romans 8:38":"Paul lists every scary thing — death, fear, the future — and says none of it can cut you off from God's love.",
+"Romans 8:39":"Nothing anywhere in all creation can separate you from God's love in Jesus. Nothing.",
+"Proverbs 3:5":"Lean on God's understanding instead of only your own racing thoughts. Trust Him fully.",
+"Proverbs 3:6":"Include God in your decisions, and He'll make your path clearer.",
+"Jeremiah 29:11":"God says His plans for you are for good — to give you a future and hope, not to harm you.",
+"Isaiah 41:10":"God says: don't be afraid, I'm with you, I'll strengthen you and hold you up.",
+"Matthew 11:28":"Jesus invites the exhausted and overloaded to come to Him for real rest.",
+"Matthew 6:34":"Don't carry tomorrow's worries today. Just handle today. Tomorrow gets its own attention.",
+"Joshua 1:9":"God's command: be strong and brave, don't be terrified, because He's with you everywhere you go.",
+"2 Timothy 1:7":"God didn't give you a spirit of fear, but of power, love, and a sound mind.",
+"Genesis 1:1":"The very first line of the Bible: God created everything. The whole universe starts with Him.",
+"Genesis 1:27":"People are made in God's image — which means you carry real, God-given worth.",
+"Ephesians 2:8":"You're saved by grace through faith — it's a gift, not something you earn or brag about.",
+"1 Peter 5:7":"Hand all your anxiety over to God, because He genuinely cares about you.",
+"Galatians 5:22":"The 'fruit' of God's Spirit growing in you: love, joy, peace, patience, and more.",
+"Hebrews 11:1":"Faith means being sure of things you hope for, even when you can't see them yet.",
+"Revelation 21:4":"A promise about the end: God wipes away every tear. No more death, crying, or pain."
+};
+function hasHelper(vid){ return !!HELPERS[vid]; }
+function showHelper(vid){
+  const note=HELPERS[vid]; if(!note) return;
+  openSheet(`
+    <div style="display:inline-block;padding:5px 12px;border-radius:20px;background:var(--gold);color:#2a1c00;font-size:12px;font-weight:700;margin-bottom:12px;">💡 IN PLAIN ENGLISH</div>
+    <h3 style="color:var(--gold);">${esc(vid)}</h3>
+    <div style="font-size:17px;line-height:1.75;margin-top:12px;">${esc(note)}</div>
+    <button class="btn btn-teal" style="margin-top:18px;" onclick="askAIVerse('${esc(vid)}')">✨ Go deeper with AI</button>
+  `);
+}
+
+async function fetchBible(ref,trans){
+  const key=ref+'|'+trans;
+  if(bibleCache[key]) return bibleCache[key];
+  const url=`https://bible-api.com/${encodeURIComponent(ref)}?translation=${trans}`;
+  const res=await fetch(url);
+  if(!res.ok) throw new Error('Could not load');
+  const data=await res.json();
+  bibleCache[key]=data;
+  return data;
+}
+
+function loadReading(ref){ go('read'); document.getElementById('refInput').value=ref; loadFromInput(); }
+function loadFromInput(){ const r=document.getElementById('refInput').value.trim(); if(r){ state.currentRef=r; renderRead(); } }
+function reloadCurrent(){ state.trans=document.getElementById('transSelect').value; save(); bibleCache={}; renderRead(); }
+
+function toggleReadMode(){
+  state.readMode = state.readMode==='scroll'?'chunk':'scroll'; save();
+  document.getElementById('modeBtn').innerHTML = ICON(state.readMode==='scroll'?'scroll':'cards',20);
+  renderRead();
+}
+
+let chunkIndex=0;
+let _currentVerses=[];
+async function renderRead(){
+  stopSpeak();
+  const sel=document.getElementById('transSelect'); if(sel) sel.value=state.trans;
+  document.getElementById('modeBtn').innerHTML = ICON(state.readMode==='scroll'?'scroll':'cards',20);
+  const c=document.getElementById('readContent');
+  const ref=state.currentRef;
+  document.getElementById('readTitle').textContent=ref;
+  document.getElementById('refInput').value=ref;
+  c.innerHTML='<div class="empty"><div class="e-ico">📖</div>Loading the Word…</div>';
+  try{
+    const data=await fetchBible(ref,state.trans);
+    if(!data.verses||!data.verses.length){ c.innerHTML='<div class="empty"><div class="e-ico">🤔</div>No verses found. Try "John 3" or "Psalm 23".</div>'; return; }
+    markRead();
+    if(state._lastCountedRef!==state.currentRef){ state.chapters++; state._lastCountedRef=state.currentRef; save(); }
+    renderHome();
+    _currentVerses=data.verses;
+    const fmtBar = `<div class="fmt-bar">
+        <button class="fmt-tog ${state.fmt.chunk?'on':''}" onclick="toggleFmt('chunk')" title="Chunk into phrases">⌶ Chunk</button>
+        <button class="fmt-tog ${state.fmt.bold?'on':''}" onclick="toggleFmt('bold')" title="Bold key words">𝐁 Bold</button>
+        <button class="fmt-tog ${state.fmt.lexicon?'on':''}" onclick="toggleFmt('lexicon')" title="Tappable word meanings">◈ Words</button>
+        <button class="fmt-tog ${state.fmt.simplify?'on':''}" onclick="toggleFmt('simplify')" title="Show plain-English helper">💡 Notes</button>
+        <button class="fmt-tog ${state.fmt.ruler?'on':''}" onclick="toggleFmt('ruler')" title="Focus reading ruler">▭ Ruler</button>
+        <button class="fmt-tog" onclick="changeSize(-1)">A−</button>
+        <button class="fmt-tog" onclick="changeSize(1)">A+</button>
+      </div>`;
+    if(state.readMode==='scroll'){
+      let html=fmtBar;
+      data.verses.forEach((v,idx)=>{
+        const vid=`${v.book_name} ${v.chapter}:${v.verse}`;
+        const hl=state.highlights[vid];
+        const help=(state.fmt.simplify && hasHelper(vid))? `<span class="help-dot" onclick="event.stopPropagation();showHelper('${esc(vid)}')">💡</span>`:'';
+        html+=`<div class="card verse-card" style="${hl?'border-left:4px solid '+hl+';':''}" onclick="verseMenu('${esc(vid)}',this)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:700;color:var(--gold);">${v.verse}${help}</span>
+            <span class="say-btn" onclick="event.stopPropagation();speakText(this.closest('.verse-card').querySelector('.vtext').innerText,this)">🔊</span>
+          </div>
+          <div class="vtext" style="font-size:${state.fmt.size}px;">${formatVerse(v.text)}</div></div>`;
+      });
+      html+=chapterNav();
+      c.innerHTML=html;
+    } else {
+      chunkIndex=0;
+      renderChunk(data.verses,fmtBar);
+    }
+    if(state.fmt.ruler) enableRuler();
+  }catch(e){
+    c.innerHTML='<div class="empty"><div class="e-ico">📡</div>Couldn\'t reach the Bible server.<br><span style="font-size:13px;">(If you\'re in the preview, this is expected — it works on your live site.)</span><br><br><button class="btn btn-ghost btn-sm" onclick="renderRead()">Try again</button></div>';
+  }
+}
+
+function toggleFmt(key){ state.fmt[key]=!state.fmt[key]; saveFmt(); if(document.getElementById('screen-read').classList.contains('active')) renderRead(); }
+function changeSize(d){ state.fmt.size=Math.max(15,Math.min(34,state.fmt.size+d*2)); saveFmt(); if(document.getElementById('screen-read').classList.contains('active')) renderRead(); }
+
+/* Parse "Book Chapter" and build prev/next chapter buttons */
+function parseRef(ref){
+  const m=ref.match(/^(.+?)\s+(\d+)/);
+  if(!m) return null;
+  return {book:m[1].trim(), chap:parseInt(m[2])};
+}
+function chapterNav(){
+  const p=parseRef(state.currentRef);
+  if(!p) return '';
+  const max=CHAPTER_COUNTS[p.book]||CHAPTER_COUNTS[p.book==='Psalm'?'Psalms':p.book]||999;
+  const prev = p.chap>1 ? `<button class="btn btn-ghost" style="flex:1;" onclick="gotoChapter('${esc(p.book)}',${p.chap-1})">← ${esc(p.book)} ${p.chap-1}</button>` : '<div style="flex:1;"></div>';
+  const next = p.chap<max ? `<button class="btn btn-primary" style="flex:1;" onclick="gotoChapter('${esc(p.book)}',${p.chap+1})">${esc(p.book)} ${p.chap+1} →</button>` : '<div style="flex:1;"></div>';
+  return `<div class="row" style="margin-top:18px;margin-bottom:30px;">${prev}${next}</div>
+    <div style="text-align:center;"><button class="btn btn-gold btn-sm" onclick="openJournalEditor()">✍ Journal on this chapter</button></div>`;
+}
+function gotoChapter(book,chap){ stopSpeak(); loadReading(book+' '+chap); }
+
+function renderChunk(verses,fmtBar){
+  const c=document.getElementById('readContent');
+  const v=verses[chunkIndex];
+  const vid=`${v.book_name} ${v.chapter}:${v.verse}`;
+  const help=(state.fmt.simplify && hasHelper(vid))? `<button class="btn btn-gold btn-sm" style="margin-top:14px;width:auto;" onclick="showHelper('${esc(vid)}')">💡 Plain English</button>`:'';
+  c.innerHTML=(fmtBar||'')+`
+    <div style="display:flex;flex-direction:column;justify-content:center;min-height:50vh;">
+      <div style="text-align:center;font-size:13px;color:var(--text-faint);font-weight:700;margin-bottom:16px;">${chunkIndex+1} / ${verses.length}</div>
+      <div class="card" style="padding:28px 22px;" onclick="verseMenu('${esc(vid)}',this)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <span style="font-size:14px;font-weight:700;color:var(--gold);">${esc(vid)}</span>
+          <span class="say-btn" onclick="event.stopPropagation();speakText(this.closest('.card').querySelector('.vtext').innerText,this)">🔊</span>
+        </div>
+        <div class="vtext" style="font-size:${Math.round(state.fmt.size*1.35)}px;line-height:1.7;">${formatVerse(v.text)}</div>
+        ${help}
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="chunkNav(-1)" ${chunkIndex===0?'disabled style=\"opacity:.4\"':''}>← Prev</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="chunkNav(1)" ${chunkIndex===verses.length-1?'disabled style=\"opacity:.4\"':''}>Next →</button>
+    </div>`;
+  c._verses=verses;
+  let sx=0; const stage=c.querySelector('.card');
+  stage.ontouchstart=e=>sx=e.touches[0].clientX;
+  stage.ontouchend=e=>{ const dx=e.changedTouches[0].clientX-sx; if(dx<-50)chunkNav(1); if(dx>50)chunkNav(-1); };
+}
+function chunkNav(d){ stopSpeak(); const verses=document.getElementById('readContent')._verses; const n=chunkIndex+d; if(n>=0&&n<verses.length){ chunkIndex=n; const bar=document.querySelector('.fmt-bar'); renderChunk(verses, bar?bar.outerHTML:''); } }
+
+/* Reading ruler: a soft horizontal band that follows touch/mouse to anchor the eye */
+function enableRuler(){
+  const c=document.getElementById('readContent');
+  let ruler=document.getElementById('readRuler');
+  if(!ruler){ ruler=document.createElement('div'); ruler.id='readRuler'; document.getElementById('screen-read').appendChild(ruler); }
+  ruler.style.display='block';
+  const move=e=>{ const y=(e.touches?e.touches[0].clientY:e.clientY); ruler.style.top=(y-22)+'px'; };
+  c.onmousemove=move; c.ontouchmove=move;
+}
+
+/* ============ LEXICON CARD ============ */
+function showLexicon(word){
+  const l=LEXICON[word]||LEXICON[word+' ']; if(!l){ return; }
+  openSheet(`
+    <div style="display:inline-block;padding:5px 12px;border-radius:20px;background:var(--teal);color:#fff;font-size:12px;font-weight:700;margin-bottom:12px;">LEXICON</div>
+    <h3 style="font-size:26px;text-transform:capitalize;color:var(--teal-soft);">${esc(word)}</h3>
+    <div style="font-size:13px;color:var(--gold);font-weight:600;margin:4px 0 16px;">Original: ${esc(l.o)}</div>
+    <div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;">Plain English</div><div style="font-size:16px;line-height:1.6;">${esc(l.d)}</div></div>
+    <div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;">Cultural Context</div><div style="font-size:15px;line-height:1.6;color:var(--text-dim);">${esc(l.c)}</div></div>
+    <div style="background:var(--surface2);border-radius:14px;padding:16px;border-left:4px solid var(--purple);"><div style="font-size:12px;font-weight:700;color:var(--purple-soft);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;">Why It Matters For You</div><div style="font-size:15px;line-height:1.6;">${esc(l.w)}</div></div>
+    <button class="btn btn-teal" style="margin-top:18px;" onclick="askAIAbout('${esc(word)}')">✨ Study "${esc(word)}" with AI</button>
+  `);
+}
+
+/* ============ VERSE MENU ============ */
+let _pendingVerseText='';
+function verseMenu(vid,el){
+  _pendingVerseText = el.querySelector('.vtext')? el.querySelector('.vtext').textContent : vid;
+  const isBm=state.bookmarks.some(b=>b.ref===vid);
+  openSheet(`
+    <h3>${esc(vid)}</h3>
+    <div style="font-size:15px;line-height:1.7;color:var(--text-dim);margin:8px 0 18px;">${esc(_pendingVerseText)}</div>
+    <div style="font-size:12px;font-weight:700;color:var(--text-faint);margin-bottom:8px;">HIGHLIGHT</div>
+    <div class="row" style="margin-bottom:18px;">
+      ${['#e8b84b','#13a3cc','#9b2fb0','#3aa37c','#e0607e'].map(c=>`<div onclick="setHighlight('${esc(vid)}','${c}')" style="width:38px;height:38px;border-radius:10px;background:${c};cursor:pointer;border:2px solid var(--border);"></div>`).join('')}
+      <div onclick="setHighlight('${esc(vid)}',null)" style="width:38px;height:38px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid var(--border);">✕</div>
+    </div>
+    <button class="btn ${isBm?'btn-gold':'btn-ghost'}" style="margin-bottom:10px;" onclick="toggleBookmark('${esc(vid)}')">${isBm?'★ Bookmarked':'🔖 Bookmark'}</button>
+    <button class="btn btn-teal" style="margin-bottom:10px;" onclick="askAIVerse('${esc(vid)}')">✨ Study with AI</button>
+    <button class="btn btn-primary" style="margin-bottom:10px;" onclick="addVerseToCanvas('${esc(vid)}')">🎨 Send to Canvas</button>
+    <button class="btn btn-ghost" onclick="shareVerse('${esc(vid)}')">📤 Share</button>
+  `);
+}
+function setHighlight(vid,c){ if(c)state.highlights[vid]=c; else delete state.highlights[vid]; save(); closeSheet(); renderRead(); toast(c?'Highlighted':'Highlight removed'); }
+function toggleBookmark(vid){
+  const i=state.bookmarks.findIndex(b=>b.ref===vid);
+  if(i>=0)state.bookmarks.splice(i,1); else state.bookmarks.unshift({ref:vid,text:_pendingVerseText,date:Date.now()});
+  save(); closeSheet(); renderHome(); toast(i>=0?'Bookmark removed':'Bookmarked!');
+}
+function shareVerse(vid){
+  const txt=`"${_pendingVerseText}" — ${vid}`;
+  if(navigator.share){ navigator.share({text:txt}).catch(()=>{}); }
+  else { navigator.clipboard.writeText(txt).then(()=>toast('Copied to clipboard!')); }
+  closeSheet();
+}
+
+/* ============ LIBRARY ============ */
+/* Chapter counts per book so the Library can show a chapter grid */
+const CHAPTER_COUNTS={"Genesis":50,"Exodus":40,"Leviticus":27,"Numbers":36,"Deuteronomy":34,"Joshua":24,"Judges":21,"Ruth":4,"1 Samuel":31,"2 Samuel":24,"1 Kings":22,"2 Kings":25,"1 Chronicles":29,"2 Chronicles":36,"Ezra":10,"Nehemiah":13,"Esther":10,"Job":42,"Psalms":150,"Proverbs":31,"Ecclesiastes":12,"Song of Solomon":8,"Isaiah":66,"Jeremiah":52,"Lamentations":5,"Ezekiel":48,"Daniel":12,"Hosea":14,"Joel":3,"Amos":9,"Obadiah":1,"Jonah":4,"Micah":7,"Nahum":3,"Habakkuk":3,"Zephaniah":3,"Haggai":2,"Zechariah":14,"Malachi":4,"Matthew":28,"Mark":16,"Luke":24,"John":21,"Acts":28,"Romans":16,"1 Corinthians":16,"2 Corinthians":13,"Galatians":6,"Ephesians":6,"Philippians":4,"Colossians":4,"1 Thessalonians":5,"2 Thessalonians":3,"1 Timothy":6,"2 Timothy":4,"Titus":3,"Philemon":1,"Hebrews":13,"James":5,"1 Peter":5,"2 Peter":3,"1 John":5,"2 John":1,"3 John":1,"Jude":1,"Revelation":22};
+function openLibrary(){
+  let html='<h3>📚 Library</h3><div style="font-size:13px;color:var(--text-faint);margin:4px 0 8px;">Tap a book, then pick a chapter.</div><div style="margin-top:10px;">';
+  for(const test in BIBLE_BOOKS){
+    html+=`<div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin:16px 0 10px;">${test}</div><div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+    BIBLE_BOOKS[test].forEach(b=>{ html+=`<span class="pill" onclick="openChapters('${b}')">${b}</span>`; });
+    html+='</div>';
+  }
+  html+='</div>';
+  openSheet(html);
+}
+function openChapters(book){
+  const n=CHAPTER_COUNTS[book]||1;
+  if(n===1){ closeSheet(); loadReading(book+' 1'); return; }
+  let grid='';
+  for(let i=1;i<=n;i++){ grid+=`<span class="pill" style="min-width:42px;justify-content:center;" onclick="closeSheet();loadReading('${book} ${i}')">${i}</span>`; }
+  openSheet(`<button class="btn btn-ghost btn-sm" style="margin-bottom:14px;" onclick="openLibrary()">← All Books</button>
+    <h3>${book}</h3><div style="font-size:13px;color:var(--text-faint);margin:4px 0 14px;">${n} chapters — tap one</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">${grid}</div>`);
+}
+function openBookmarks(){ go('bookmarks'); }
+</script>
+<script>
+/* ============ HOME ============ */
+function renderHome(){
+  document.getElementById('statStreak').textContent=state.streak;
+  document.getElementById('statChapters').textContent=state.chapters;
+  document.getElementById('statSaved').textContent=state.bookmarks.length;
+  if(state.lastRead) document.getElementById('continueRef').textContent=state.currentRef;
+  const hs=document.getElementById('heroSlot');
+  if(hs && !hs._done){ hs.innerHTML=logoSlot('images/focus-logo.png','FocusWord'); hs._done=true; }
+  const wb=document.getElementById('wiredBanner');
+  if(wb && !wb._done){ wb.innerHTML=`<img src="images/wired-mind.png" alt="" style="width:100%;height:130px;object-fit:cover;display:block;" onerror="this.style.display='none'">`; wb._done=true; }
+  const ps=document.getElementById('prayHeroSlot');
+  if(ps && !ps._done){ ps.innerHTML=imgSlot('images/ancient-words.png','Ancient Words for a Modern Mind'); ps._done=true; }
+  loadVOTD();
+}
+const VOTD_LIST=["John 3:16","Philippians 4:6-7","Jeremiah 29:11","Psalm 23:1","Isaiah 41:10","Romans 8:28","Proverbs 3:5-6","Matthew 11:28","Joshua 1:9","Psalm 46:10","2 Timothy 1:7","Philippians 4:13"];
+async function loadVOTD(){
+  const el=document.getElementById('votd'), ref=document.getElementById('votdRef');
+  if(el._done) return;
+  const today=new Date().getDate();
+  const pick=VOTD_LIST[today % VOTD_LIST.length];
+  try{
+    const data=await fetchBible(pick,state.trans);
+    const raw=data.verses.map(v=>v.text.trim()).join(' ');
+    el.innerHTML=applyInline(esc(raw));
+    ref.textContent='— '+pick;
+    el._done=true;
+  }catch(e){ el.textContent='"For God so loved the world…"'; ref.textContent='— John 3:16'; }
+}
+
+/* ============ JOURNAL ============ */
+const JTYPES=[{n:'Praise',c:'#e8b84b'},{n:'Gratitude',c:'#3aa37c'},{n:'Prayer',c:'#9b2fb0'},{n:'Confession',c:'#e0607e'},{n:'Reflection',c:'#13a3cc'},{n:'Lament',c:'#6f8bab'}];
+let journalFilter='All';
+function renderJournal(){
+  renderHome();
+  const f=document.getElementById('journalFilters');
+  f.innerHTML=`<span class="pill ${journalFilter==='All'?'active':''}" onclick="journalFilter='All';renderJournal()">All</span>`+
+    JTYPES.map(t=>`<span class="pill ${journalFilter===t.n?'active':''}" onclick="journalFilter='${t.n}';renderJournal()">${t.n}</span>`).join('');
+  const list=document.getElementById('journalList');
+  const items=state.journal.filter(j=>journalFilter==='All'||j.type===journalFilter);
+  if(!items.length){ list.innerHTML='<div class="empty"><div class="e-ico">🙏</div>No entries yet.<br>Tap ＋ to write your first prayer.</div>'; return; }
+  list.innerHTML=items.map(j=>{
+    const t=JTYPES.find(x=>x.n===j.type)||JTYPES[2];
+    return `<div class="card tap" onclick="openJournalEditor('${j.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${t.c};color:#fff;">${j.type}</span>
+        <span style="font-size:12px;color:var(--text-faint);">${new Date(j.date).toLocaleDateString()}</span>
+      </div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:4px;">${esc(j.title||'Untitled')}</div>
+      ${j.ref?`<div style="font-size:12px;color:var(--gold);font-weight:600;margin-bottom:6px;">${esc(j.ref)}</div>`:''}
+      <div style="font-size:14px;color:var(--text-dim);line-height:1.6;max-height:60px;overflow:hidden;">${esc(j.body||'')}</div>
+    </div>`;
+  }).join('');
+}
+function openJournalEditor(id){
+  const j = id? state.journal.find(x=>x.id===id) : {id:'j'+Date.now(),type:'Prayer',title:'',ref:'',body:'',date:Date.now()};
+  openSheet(`
+    <h3>${id?'Edit Entry':'New Entry'}</h3>
+    <label>Type</label>
+    <div class="row" id="jtypeRow" style="margin-bottom:14px;">${JTYPES.map(t=>`<span class="pill ${j.type===t.n?'active':''}" data-t="${t.n}" onclick="document.querySelectorAll('#jtypeRow .pill').forEach(p=>p.classList.remove('active'));this.classList.add('active')">${t.n}</span>`).join('')}</div>
+    <label>Title</label><input id="jTitle" value="${esc(j.title)}" placeholder="What's on your heart?">
+    <label>Verse Reference (optional)</label><input id="jRef" value="${esc(j.ref)}" placeholder="e.g. Psalm 34:18">
+    <label>Your words</label><textarea id="jBody" style="min-height:160px;" placeholder="Write freely…">${esc(j.body)}</textarea>
+    <button class="btn btn-primary" style="margin-top:6px;" onclick="saveJournal('${j.id}')">Save Entry</button>
+    ${id?`<button class="btn btn-ghost" style="margin-top:10px;color:#e0607e;" onclick="deleteJournal('${j.id}')">Delete</button>`:''}
+  `);
+}
+function saveJournal(id){
+  const type=document.querySelector('#jtypeRow .pill.active').dataset.t;
+  const title=document.getElementById('jTitle').value, ref=document.getElementById('jRef').value, body=document.getElementById('jBody').value;
+  const ex=state.journal.find(x=>x.id===id);
+  if(ex){ Object.assign(ex,{type,title,ref,body}); }
+  else { state.journal.unshift({id,type,title,ref,body,date:Date.now()}); }
+  save(); closeSheet(); renderJournal(); toast('Saved 🙏');
+}
+function deleteJournal(id){ state.journal=state.journal.filter(x=>x.id!==id); save(); closeSheet(); renderJournal(); toast('Deleted'); }
+
+/* ============ FOCUS TIMER ============ */
+let timerInt=null, timerLeft=0, timerTotal=0;
+function renderTimer(){
+  return `
+  <div style="text-align:center;">
+    <svg width="220" height="220" viewBox="0 0 220 220" style="margin:10px auto;">
+      <circle cx="110" cy="110" r="96" fill="none" stroke="var(--surface2)" stroke-width="14"/>
+      <circle id="timerRing" cx="110" cy="110" r="96" fill="none" stroke="url(#tg)" stroke-width="14" stroke-linecap="round" stroke-dasharray="603" stroke-dashoffset="0" transform="rotate(-90 110 110)" style="transition:stroke-dashoffset 1s linear;"/>
+      <defs><linearGradient id="tg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--purple)"/><stop offset="1" stop-color="var(--teal)"/></linearGradient></defs>
+      <text id="timerText" x="110" y="118" text-anchor="middle" font-size="40" font-weight="700" fill="var(--text)" font-family="Lexend">25:00</text>
+    </svg>
+    <div class="row" style="justify-content:center;margin:16px 0;">
+      ${[5,10,25,45].map(m=>`<span class="pill" onclick="setTimer(${m})">${m} min</span>`).join('')}
+    </div>
+    <div class="row" style="justify-content:center;">
+      <button class="btn btn-primary" style="width:auto;padding:13px 30px;" id="timerToggle" onclick="toggleTimer()">▶ Start</button>
+      <button class="btn btn-ghost" style="width:auto;padding:13px 24px;" onclick="resetTimer()">Reset</button>
+    </div>
+  </div>
+  <div class="card" style="margin-top:24px;border-color:var(--teal);">
+    <div style="font-weight:700;font-size:16px;margin-bottom:10px;">📖 ADHD Reading Tips</div>
+    <div style="font-size:14px;line-height:1.8;color:var(--text-dim);">
+      • Read <b style="color:var(--text)">one chunk</b>, then pause<br>
+      • Read <b style="color:var(--text)">aloud</b> — hearing it boosts focus<br>
+      • Tap the <b style="color:var(--teal-soft)">teal words</b> when curious<br>
+      • A 5-minute win beats a 0-minute plan<br>
+      • Move your body between sessions
+    </div>
+  </div>
+  <div class="card" style="border-color:var(--gold);">
+    <div style="font-weight:700;font-size:16px;margin-bottom:10px;">✍ The SOAP Method</div>
+    <div style="font-size:14px;line-height:1.9;color:var(--text-dim);">
+      <b style="color:var(--gold)">S</b>cripture — write the verse<br>
+      <b style="color:var(--gold)">O</b>bservation — what does it say?<br>
+      <b style="color:var(--gold)">A</b>pplication — how does it apply to me?<br>
+      <b style="color:var(--gold)">P</b>rayer — talk to God about it
+    </div>
+  </div>`;
+}
+function setTimer(m){ timerTotal=timerLeft=m*60; updateTimerUI(); if(timerInt){clearInterval(timerInt);timerInt=null;document.getElementById('timerToggle').textContent='▶ Start';} }
+function updateTimerUI(){
+  const t=document.getElementById('timerText'); if(!t)return;
+  const mm=String(Math.floor(timerLeft/60)).padStart(2,'0'), ss=String(timerLeft%60).padStart(2,'0');
+  t.textContent=`${mm}:${ss}`;
+  const ring=document.getElementById('timerRing');
+  ring.style.strokeDashoffset = 603*(1-(timerLeft/(timerTotal||1)));
+}
+function toggleTimer(){
+  const btn=document.getElementById('timerToggle');
+  if(timerInt){ clearInterval(timerInt); timerInt=null; btn.textContent='▶ Resume'; return; }
+  if(timerLeft<=0) setTimer(25);
+  btn.textContent='⏸ Pause';
+  timerInt=setInterval(()=>{ timerLeft--; updateTimerUI(); if(timerLeft<=0){ clearInterval(timerInt); timerInt=null; btn.textContent='▶ Start'; toast('⏰ Session complete! Well done.'); try{navigator.vibrate&&navigator.vibrate(300);}catch(e){} } },1000);
+}
+function resetTimer(){ if(timerInt){clearInterval(timerInt);timerInt=null;} setTimer(25); document.getElementById('timerToggle').textContent='▶ Start'; }
+
+/* ============ AI COMPANION (Gemini) ============ */
+let aiHistory=[];
+function openAI(){
+  if(!state.geminiKey){ openAIKeyPrompt(); return; }
+  go('ai');
+}
+function openAIKeyPrompt(){
+  openSheet(`
+    <h3>✨ Connect AI Study</h3>
+    <p style="font-size:14px;color:var(--text-dim);line-height:1.7;margin:8px 0 16px;">FocusWord uses Google Gemini's <b>free</b> AI to explain Scripture in plain, ADHD-friendly language. You'll need a free API key (takes 1 minute):</p>
+    <ol style="font-size:14px;color:var(--text-dim);line-height:1.9;margin:0 0 16px 18px;">
+      <li>Go to <b style="color:var(--teal-soft)">aistudio.google.com/apikey</b></li>
+      <li>Sign in with Google → "Create API Key"</li>
+      <li>Copy it and paste below</li>
+    </ol>
+    <label>Gemini API Key</label>
+    <input id="aiKeyInput" placeholder="Paste your key here" value="${esc(state.geminiKey)}">
+    <button class="btn btn-teal" onclick="saveAIKey()">Save & Start</button>
+    <button class="btn btn-ghost" style="margin-top:10px;" onclick="window.open('https://aistudio.google.com/apikey','_blank')">Open Google AI Studio →</button>
+  `);
+}
+function saveAIKey(){ state.geminiKey=document.getElementById('aiKeyInput').value.trim(); save(); closeSheet(); if(state.geminiKey){toast('Connected!');go('ai');} }
+
+const AI_MODELS=['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-2.0-flash-lite'];
+async function callGemini(prompt){
+  const sys="You are a warm, encouraging Bible study companion for someone with ADHD. Keep answers SHORT. Break into small 1-2 sentence paragraphs with line breaks. Use simple, plain English. Be biblically faithful, gentle, and hope-filled. Never overwhelm with walls of text.";
+  for(const model of AI_MODELS){
+    try{
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${state.geminiKey}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:sys+"\n\nQuestion: "+prompt}]}],generationConfig:{maxOutputTokens:600,temperature:0.7}})
+      });
+      if(!res.ok) continue;
+      const data=await res.json();
+      const txt=data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if(txt) return txt;
+    }catch(e){}
+  }
+  throw new Error('AI unavailable');
+}
+function renderAI(){
+  return `
+  <div id="aiChat" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+    ${aiHistory.length?'':`
+      <div class="card" style="border-color:var(--teal);">
+        <div style="font-weight:700;margin-bottom:8px;">✨ Ask anything about the Bible</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Short, clear answers built for your brain.</div>
+        <div class="row">
+          <span class="pill" onclick="aiSample('What does grace mean in Greek?')">Grace in Greek</span>
+          <span class="pill" onclick="aiSample('Explain John 3:16 simply')">Explain John 3:16</span>
+          <span class="pill" onclick="aiSample('Best Bible verses for anxiety?')">Verses for anxiety</span>
+          <span class="pill" onclick="aiSample('Give me an ADHD-friendly prayer tip')">ADHD prayer tip</span>
+        </div>
+      </div>`}
+    ${aiHistory.map(m=>`<div class="card" style="${m.role==='user'?'background:var(--purple);color:#fff;margin-left:40px;':'border-color:var(--teal);'}">${m.role==='ai'?formatAI(m.text):esc(m.text)}</div>`).join('')}
+  </div>`;
+}
+function formatAI(t){ return esc(t).replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>'); }
+function aiSample(q){ document.getElementById('aiInput').value=q; sendAI(); }
+function askAIAbout(word){ closeSheet(); aiHistory=[]; go('ai'); setTimeout(()=>aiSample(`Explain the biblical word "${word}" simply for someone with ADHD`),100); }
+function askAIVerse(vid){ closeSheet(); aiHistory=[]; go('ai'); setTimeout(()=>aiSample(`Explain ${vid} in a short, encouraging way`),100); }
+async function sendAI(){
+  const inp=document.getElementById('aiInput'); const q=inp.value.trim(); if(!q)return;
+  inp.value=''; aiHistory.push({role:'user',text:q}); aiHistory.push({role:'ai',text:'…thinking…'});
+  refreshAI();
+  try{ const ans=await callGemini(q); aiHistory[aiHistory.length-1].text=ans; }
+  catch(e){ aiHistory[aiHistory.length-1].text='Sorry, I couldn\'t reach the AI. Check your API key in Settings, or try again.'; }
+  refreshAI();
+}
+function refreshAI(){
+  const sc=document.getElementById('subContent'); if(!sc||document.getElementById('subTitle').textContent!=='AI Study')return;
+  const chat=sc.querySelector('#aiChat');
+  if(chat) chat.outerHTML=`<div id="aiChat" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">${aiHistory.map(m=>`<div class="card" style="${m.role==='user'?'background:var(--purple);color:#fff;margin-left:40px;':'border-color:var(--teal);'}">${m.role==='ai'?formatAI(m.text):esc(m.text)}</div>`).join('')}</div>`;
+  const last=sc.querySelector('#aiChat .card:last-child'); if(last)last.scrollIntoView({behavior:'smooth'});
+}
+
+/* ============ SETTINGS ============ */
+function openSettings(){
+  openSheet(`
+    <h3>⚙ Settings</h3>
+    <label style="margin-top:14px;">Color Theme</label>
+    <div class="grid2" style="margin-bottom:18px;">
+      ${[['night','Night','🌌'],['parchment','Parchment','📜'],['ocean','Ocean','🌊'],['forest','Forest','🌲']].map(t=>`<div class="card tap" style="margin-bottom:0;text-align:center;${state.theme===t[0]?'border-color:var(--purple-soft);border-width:2px;':''}" onclick="setTheme('${t[0]}');openSettings()"><div style="font-size:26px;">${t[2]}</div><div style="font-weight:600;font-size:13px;margin-top:4px;">${t[1]}</div></div>`).join('')}
+    </div>
+    <label>Bible Translation</label>
+    <select onchange="state.trans=this.value;save();bibleCache={};document.getElementById('votd')._done=false;loadVOTD();">
+      <option value="kjv" ${state.trans==='kjv'?'selected':''}>King James Version (KJV)</option>
+      <option value="web" ${state.trans==='web'?'selected':''}>World English Bible (WEB) — easiest to read</option>
+      <option value="asv" ${state.trans==='asv'?'selected':''}>American Standard Version (ASV)</option>
+    </select>
+    <label style="margin-top:6px;">ADHD Reading Format</label>
+    <div style="background:var(--surface2);border-radius:14px;padding:6px 14px;margin-bottom:14px;">
+      ${[['chunk','Break verses into phrase lines'],['bold','Bold key anchor words'],['lexicon','Tappable word meanings'],['simplify','Show 💡 plain-English notes'],['ruler','Focus reading ruler']].map(o=>`
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);margin:0;cursor:pointer;font-weight:500;color:var(--text);">
+          <span>${o[1]}</span>
+          <span onclick="state.fmt['${o[0]}']=!state.fmt['${o[0]}'];saveFmt();openSettings()" style="width:46px;height:26px;border-radius:14px;background:${state.fmt[o[0]]?'var(--purple)':'var(--surface)'};border:1px solid var(--border);position:relative;transition:.2s;">
+            <span style="position:absolute;top:2px;${state.fmt[o[0]]?'right:2px':'left:2px'};width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;"></span>
+          </span>
+        </label>`).join('')}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
+        <span style="font-weight:500;">Text size</span>
+        <span><button class="iconbtn" style="width:34px;height:34px;display:inline-flex;" onclick="changeSize(-1);openSettings()">A−</button> <b style="margin:0 6px;">${state.fmt.size}px</b> <button class="iconbtn" style="width:34px;height:34px;display:inline-flex;" onclick="changeSize(1);openSettings()">A+</button></span>
+      </div>
+    </div>
+    <label>AI Study (Gemini)</label>
+    <button class="btn btn-ghost" onclick="closeSheet();openAIKeyPrompt()">${state.geminiKey?'✓ Connected — Update Key':'Connect AI Study'}</button>
+    <button class="btn btn-ghost" style="margin-top:18px;" onclick="closeSheet();go('mydata')">📦 My Data</button>
+  `);
+}
+</script>
+<script>
+/* ============ VISUAL STUDY CANVAS ============ */
+let drawMode=false, connectMode=false, connectFrom=null, drawing=false, dctx=null;
+function getCanvas(){
+  if(!state.activeCanvas || !state.canvases.find(c=>c.id===state.activeCanvas)){
+    if(!state.canvases.length){ state.canvases.push({id:'c'+Date.now(),name:'My First Canvas',cards:[],lines:[],strokes:[]}); }
+    state.activeCanvas=state.canvases[0].id; save();
+  }
+  return state.canvases.find(c=>c.id===state.activeCanvas);
+}
+function initCanvas(){
+  const cv=getCanvas();
+  document.getElementById('canvasName').textContent='📋 '+cv.name;
+  const dl=document.getElementById('drawLayer'), stage=document.getElementById('canvasStage');
+  setTimeout(()=>{ dl.width=stage.clientWidth; dl.height=stage.clientHeight; dctx=dl.getContext('2d'); renderCanvas(); },50);
+}
+function renderCanvas(){
+  const cv=getCanvas();
+  const layer=document.getElementById('cardLayer'); layer.innerHTML='';
+  cv.cards.forEach(card=>{
+    const el=document.createElement('div');
+    el.className='cv-card'; el.dataset.id=card.id;
+    el.style.cssText=`position:absolute;left:${card.x}px;top:${card.y}px;width:170px;background:${card.type==='verse'?'var(--surface2)':'var(--surface)'};border:1px solid ${card.type==='verse'?'var(--teal)':'var(--gold)'};border-radius:14px;padding:12px;box-shadow:0 4px 14px var(--shadow);cursor:grab;z-index:4;`;
+    el.innerHTML = card.type==='verse'
+      ? `<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:5px;">${esc(card.ref)}</div><div style="font-size:13px;line-height:1.5;">${esc(card.text||'').slice(0,140)}</div>`
+      : `<div style="font-family:Caveat,cursive;font-size:19px;line-height:1.3;">${esc(card.text)}</div>`;
+    el.innerHTML += `<div onclick="event.stopPropagation();deleteCard('${card.id}')" style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#e0607e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:5;">✕</div>`;
+    makeDraggable(el,card);
+    layer.appendChild(el);
+  });
+  drawLines();
+  redrawStrokes();
+}
+function makeDraggable(el,card){
+  let sx,sy,ox,oy,moved;
+  const down=e=>{
+    if(drawMode)return;
+    const p=e.touches?e.touches[0]:e;
+    if(connectMode){ handleConnect(card.id); return; }
+    moved=false; sx=p.clientX; sy=p.clientY; ox=card.x; oy=card.y; el.style.cursor='grabbing'; el.style.zIndex=10;
+    const move=ev=>{ const q=ev.touches?ev.touches[0]:ev; moved=true; card.x=ox+(q.clientX-sx); card.y=oy+(q.clientY-sy); el.style.left=card.x+'px'; el.style.top=card.y+'px'; drawLines(); ev.preventDefault(); };
+    const up=()=>{ el.style.cursor='grab'; el.style.zIndex=4; document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up); if(moved)save(); };
+    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    document.addEventListener('touchmove',move,{passive:false});document.addEventListener('touchend',up);
+  };
+  el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false});
+}
+function handleConnect(id){
+  if(!connectFrom){ connectFrom=id; toast('Now tap another card'); }
+  else if(connectFrom!==id){ const cv=getCanvas(); cv.lines.push({from:connectFrom,to:id,label:''}); connectFrom=null; save(); drawLines(); toast('Connected!'); toggleConnect(); }
+}
+function drawLines(){
+  const cv=getCanvas(); const svg=document.getElementById('lineLayer'); svg.innerHTML='';
+  cv.lines.forEach((ln,i)=>{
+    const a=cv.cards.find(c=>c.id===ln.from), b=cv.cards.find(c=>c.id===ln.to); if(!a||!b)return;
+    const x1=a.x+85,y1=a.y+40,x2=b.x+85,y2=b.y+40;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1);line.setAttribute('y1',y1);line.setAttribute('x2',x2);line.setAttribute('y2',y2);
+    line.setAttribute('stroke','var(--purple-soft)');line.setAttribute('stroke-width','2.5');line.setAttribute('stroke-dasharray','5,4');
+    svg.appendChild(line);
+    if(ln.label){ const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',(x1+x2)/2);t.setAttribute('y',(y1+y2)/2);t.setAttribute('fill','var(--text)');t.setAttribute('font-size','11');t.setAttribute('text-anchor','middle');t.textContent=ln.label; svg.appendChild(t); }
+  });
+}
+function redrawStrokes(){
+  const cv=getCanvas(); if(!dctx)return; dctx.clearRect(0,0,dctx.canvas.width,dctx.canvas.height);
+  (cv.strokes||[]).forEach(stroke=>{
+    dctx.beginPath(); dctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--teal-soft'); dctx.lineWidth=3; dctx.lineCap='round'; dctx.lineJoin='round';
+    stroke.forEach((p,i)=>{ if(i===0)dctx.moveTo(p.x,p.y); else dctx.lineTo(p.x,p.y); }); dctx.stroke();
+  });
+}
+function toggleDraw(){
+  drawMode=!drawMode; if(connectMode)toggleConnect();
+  document.getElementById('drawPill').classList.toggle('active',drawMode);
+  const dl=document.getElementById('drawLayer'); dl.style.pointerEvents=drawMode?'auto':'none';
+  if(drawMode){ const cv=getCanvas(); let cur=null;
+    const pos=e=>{ const r=dl.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return {x:p.clientX-r.left,y:p.clientY-r.top}; };
+    dl.onmousedown=dl.ontouchstart=e=>{ drawing=true; cur=[pos(e)]; e.preventDefault(); };
+    dl.onmousemove=dl.ontouchmove=e=>{ if(!drawing)return; cur.push(pos(e)); redrawStrokes(); dctx.beginPath(); dctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--teal-soft'); dctx.lineWidth=3; dctx.lineCap='round'; cur.forEach((p,i)=>{i===0?dctx.moveTo(p.x,p.y):dctx.lineTo(p.x,p.y);}); dctx.stroke(); e.preventDefault(); };
+    dl.onmouseup=dl.ontouchend=()=>{ if(drawing&&cur.length>1){ cv.strokes=cv.strokes||[]; cv.strokes.push(cur); save(); } drawing=false; };
+    toast('Draw mode on');
+  } else { const dl=document.getElementById('drawLayer'); dl.onmousedown=dl.onmousemove=dl.onmouseup=dl.ontouchstart=dl.ontouchmove=dl.ontouchend=null; }
+}
+function toggleConnect(){
+  connectMode=!connectMode; connectFrom=null; if(drawMode)toggleDraw();
+  document.getElementById('connectPill').classList.toggle('active',connectMode);
+  if(connectMode)toast('Tap a card, then tap another');
+}
+function addTextCard(){
+  openSheet(`<h3>＋ Add Note</h3><textarea id="noteText" placeholder="Type your thought…" style="min-height:120px;font-family:Caveat,cursive;font-size:19px;"></textarea><button class="btn btn-gold" onclick="confirmTextCard()">Add to Canvas</button>`);
+}
+function confirmTextCard(){ const t=document.getElementById('noteText').value.trim(); if(!t)return; const cv=getCanvas(); cv.cards.push({id:'cd'+Date.now(),type:'note',text:t,x:30+Math.random()*60,y:30+Math.random()*60}); save(); closeSheet(); renderCanvas(); }
+function addVerseCard(){
+  openSheet(`<h3>＋ Add Verse</h3><label>Reference</label><input id="vRef" placeholder="e.g. John 3:16"><button class="btn btn-teal" onclick="confirmVerseCard()">Fetch & Add</button>`);
+}
+async function confirmVerseCard(){
+  const ref=document.getElementById('vRef').value.trim(); if(!ref)return;
+  closeSheet(); toast('Fetching…');
+  try{ const data=await fetchBible(ref,state.trans); const text=data.verses.map(v=>v.text.trim()).join(' '); const cv=getCanvas(); cv.cards.push({id:'cd'+Date.now(),type:'verse',ref:data.reference||ref,text,x:30+Math.random()*60,y:30+Math.random()*60}); save(); renderCanvas(); }
+  catch(e){ toast('Could not find that verse'); }
+}
+function addVerseToCanvas(vid){ const cv=getCanvas(); cv.cards.push({id:'cd'+Date.now(),type:'verse',ref:vid,text:_pendingVerseText,x:30+Math.random()*60,y:30+Math.random()*60}); save(); closeSheet(); toast('Added to Canvas 🎨'); }
+function deleteCard(id){ const cv=getCanvas(); cv.cards=cv.cards.filter(c=>c.id!==id); cv.lines=cv.lines.filter(l=>l.from!==id&&l.to!==id); save(); renderCanvas(); }
+function openCanvasMenu(){
+  let html=`<h3>🎨 Canvases</h3><button class="btn btn-primary" style="margin:14px 0;" onclick="newCanvas()">＋ New Canvas</button>`;
+  state.canvases.forEach(cv=>{
+    html+=`<div class="card" style="margin-bottom:10px;${cv.id===state.activeCanvas?'border-color:var(--purple-soft);':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div onclick="switchCanvas('${cv.id}')" style="flex:1;cursor:pointer;"><div style="font-weight:700;">${esc(cv.name)}</div><div style="font-size:12px;color:var(--text-faint);">${cv.cards.length} cards</div></div>
+        <div style="display:flex;gap:6px;"><button class="iconbtn" style="width:34px;height:34px;font-size:14px;" onclick="renameCanvas('${cv.id}')">✎</button><button class="iconbtn" style="width:34px;height:34px;font-size:14px;color:#e0607e;" onclick="deleteCanvas('${cv.id}')">🗑</button></div>
+      </div></div>`;
+  });
+  openSheet(html);
+}
+function newCanvas(){ const n=prompt('Canvas name:','Untitled Canvas'); if(n===null)return; const c={id:'c'+Date.now(),name:n||'Untitled',cards:[],lines:[],strokes:[]}; state.canvases.push(c); state.activeCanvas=c.id; save(); closeSheet(); initCanvas(); }
+function switchCanvas(id){ state.activeCanvas=id; save(); closeSheet(); initCanvas(); }
+function renameCanvas(id){ const cv=state.canvases.find(c=>c.id===id); const n=prompt('Rename:',cv.name); if(n){cv.name=n;save();openCanvasMenu();initCanvas();} }
+function deleteCanvas(id){ if(state.canvases.length<=1){toast('Keep at least one canvas');return;} if(!confirm('Delete this canvas?'))return; state.canvases=state.canvases.filter(c=>c.id!==id); if(state.activeCanvas===id)state.activeCanvas=state.canvases[0].id; save(); closeSheet(); initCanvas(); }
+function exportCanvas(){
+  const stage=document.getElementById('canvasStage');
+  const cv=getCanvas();
+  const out=document.createElement('canvas'); out.width=stage.clientWidth*2; out.height=stage.clientHeight*2;
+  const ctx=out.getContext('2d'); ctx.scale(2,2);
+  const bg=getComputedStyle(document.body).getPropertyValue('--bg2'); ctx.fillStyle=bg; ctx.fillRect(0,0,stage.clientWidth,stage.clientHeight);
+  // lines
+  cv.lines.forEach(ln=>{ const a=cv.cards.find(c=>c.id===ln.from),b=cv.cards.find(c=>c.id===ln.to); if(!a||!b)return; ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--purple-soft'); ctx.lineWidth=2; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(a.x+85,a.y+40); ctx.lineTo(b.x+85,b.y+40); ctx.stroke(); ctx.setLineDash([]); });
+  // strokes
+  (cv.strokes||[]).forEach(s=>{ ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--teal-soft'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.beginPath(); s.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke(); });
+  // cards
+  const txt=getComputedStyle(document.body).getPropertyValue('--text');
+  cv.cards.forEach(card=>{ ctx.fillStyle=getComputedStyle(document.body).getPropertyValue(card.type==='verse'?'--surface2':'--surface'); roundRect(ctx,card.x,card.y,170,80,12); ctx.fill(); ctx.fillStyle=txt; ctx.font='12px Lexend'; wrapText(ctx,(card.ref?card.ref+': ':'')+(card.text||''),card.x+10,card.y+22,150,16); });
+  out.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=cv.name.replace(/\s+/g,'_')+'.png'; a.click(); toast('Exported! 📥'); });
+}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function wrapText(ctx,text,x,y,maxW,lh){ const words=text.split(' '); let line='',yy=y; for(let n=0;n<words.length;n++){ const test=line+words[n]+' '; if(ctx.measureText(test).width>maxW&&n>0){ ctx.fillText(line,x,yy); line=words[n]+' '; yy+=lh; if(yy>y+56)break; } else line=test; } ctx.fillText(line,x,yy); }
+</script>
+<script>
+/* ============ MORE MENU ============ */
+const MORE_ITEMS={
+  grow:[['progress','Progress','progress'],['timer','Focus Timer','timer'],['ai','AI Study','ai'],['plans','Reading Plans','plans']],
+  discover:[['library','Library','library'],['bookmarks','Bookmarks','bookmark'],['science','Science & Brain','brain'],['evangelism','Start Here','cross'],['testimonies','Testimonies','people']],
+  connect:[['videos','Videos & Links','video'],['community','Community','people']],
+  app:[['settings','Settings','settings'],['mydata','My Data','data']]
+};
+function moreCard(id,name,ico){ return `<div class="card tap" onclick="${id==='settings'?'openSettings()':id==='library'?'openLibrary()':id==='ai'?'openAI()':"go('"+id+"')"}" style="display:flex;align-items:center;gap:14px;"><div class="more-ic">${ICON(ico,21)}</div><div style="font-weight:600;flex:1;">${name}</div><div style="color:var(--text-faint);">${ICON('arrow',16)}</div></div>`; }
+function renderMore(){
+  document.getElementById('moreGrow').innerHTML=MORE_ITEMS.grow.map(i=>moreCard(...i)).join('');
+  document.getElementById('moreDiscover').innerHTML=MORE_ITEMS.discover.map(i=>moreCard(...i)).join('');
+  document.getElementById('moreConnect').innerHTML=MORE_ITEMS.connect.map(i=>moreCard(...i)).join('');
+  document.getElementById('moreApp').innerHTML=MORE_ITEMS.app.map(i=>moreCard(...i)).join('');
+}
+
+/* ============ SUB SCREEN ROUTER ============ */
+function renderSub(id){
+  const titles={progress:'Progress',timer:'Focus Timer',ai:'AI Study',plans:'Reading Plans',bookmarks:'Bookmarks',science:'Science & Brain',evangelism:'Start Here',testimonies:'Testimonies',videos:'Videos & Links',community:'Community',mydata:'My Data'};
+  document.getElementById('subTitle').textContent=titles[id]||'Section';
+  const c=document.getElementById('subContent');
+  const map={progress:renderProgress,timer:renderTimer,ai:renderAI,plans:renderPlans,bookmarks:renderBookmarks,science:renderScience,evangelism:renderEvangelism,testimonies:renderTestimonies,videos:renderVideos,community:renderCommunity,mydata:renderMyData};
+  c.innerHTML=(map[id]||(()=>'<div class="empty">Coming soon</div>'))();
+  if(id==='timer')setTimer(25);
+  if(id==='ai'){ c.innerHTML+=`<div style="position:sticky;bottom:0;background:var(--bg);padding:10px 0;display:flex;gap:8px;"><input id="aiInput" placeholder="Ask about the Bible…" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')sendAI()"><button class="iconbtn" style="flex-shrink:0;background:var(--teal);color:#fff;" onclick="sendAI()">➤</button></div>`; }
+}
+
+/* ============ PROGRESS ============ */
+function renderProgress(){
+  // heatmap last 35 days
+  let cells='';
+  for(let i=34;i>=0;i--){ const d=new Date(Date.now()-i*86400000).toISOString().slice(0,10); const n=state.readHistory[d]||0; const op=n===0?0.12:Math.min(0.3+n*0.25,1); cells+=`<div title="${d}" style="aspect-ratio:1;border-radius:5px;background:var(--teal);opacity:${op};"></div>`; }
+  const totalEntries=state.journal.length, totalHl=Object.keys(state.highlights).length;
+  return `
+  <div class="card" style="text-align:center;border-color:var(--gold);">
+    <div style="font-size:56px;animation:flame 1.5s infinite alternate;">🔥</div>
+    <div style="font-size:42px;font-weight:800;color:var(--gold);">${state.streak}</div>
+    <div style="color:var(--text-dim);font-weight:600;">Day Streak</div>
+  </div>
+  <style>@keyframes flame{from{transform:scale(1) rotate(-2deg);}to{transform:scale(1.08) rotate(2deg);}}</style>
+  <div class="section-title">Last 35 Days</div>
+  <div class="card"><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">${cells}</div></div>
+  <div class="section-title">Lifetime Stats</div>
+  <div class="grid2">
+    ${[['📖',state.chapters,'Chapters Read'],['🔖',state.bookmarks.length,'Bookmarks'],['🙏',totalEntries,'Journal Entries'],['🖍',totalHl,'Highlights']].map(s=>`<div class="card" style="text-align:center;margin-bottom:0;"><div style="font-size:26px;">${s[0]}</div><div style="font-size:28px;font-weight:800;color:var(--purple-soft);">${s[1]}</div><div style="font-size:12px;color:var(--text-faint);">${s[2]}</div></div>`).join('')}
+  </div>`;
+}
+
+/* ============ READING PLANS ============ */
+const PLANS=[
+  {id:'adhd7',name:'7-Day ADHD Starter',desc:'Short, powerful chapters to build the habit',days:['Psalm 23','John 1','Philippians 4','Psalm 139','Matthew 5','Romans 8','Psalm 91']},
+  {id:'peace',name:'Peace for Anxiety',desc:'Verses that calm a racing mind',days:['Philippians 4:4-9','Matthew 6:25-34','Psalm 46','Isaiah 41:10','John 14:27','Psalm 34','1 Peter 5:6-7']},
+  {id:'gospel',name:'Meet Jesus (John)',desc:'Walk through the Gospel of John',days:['John 1','John 2','John 3','John 4','John 5','John 6','John 7']},
+  {id:'psalms',name:'Psalms for the Soul',desc:'Raw, honest prayers for every mood',days:['Psalm 1','Psalm 19','Psalm 27','Psalm 42','Psalm 51','Psalm 103','Psalm 121']}
+];
+function renderPlans(){
+  return PLANS.map(p=>{
+    const prog=state.planProgress[p.id]||[];
+    const pct=Math.round(prog.length/p.days.length*100);
+    return `<div class="card">
+      <div style="font-weight:700;font-size:17px;">${p.name}</div>
+      <div style="font-size:13px;color:var(--text-dim);margin:3px 0 10px;">${p.desc}</div>
+      <div style="height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-bottom:10px;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--purple),var(--teal));transition:.4s;"></div></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${p.days.map((d,i)=>`<span class="pill ${prog.includes(i)?'active':''}" onclick="togglePlanDay('${p.id}',${i},'${esc(d)}')" style="font-size:11px;">${prog.includes(i)?'✓ ':''}${esc(d)}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+function togglePlanDay(pid,i,ref){
+  state.planProgress[pid]=state.planProgress[pid]||[];
+  const arr=state.planProgress[pid];
+  if(arr.includes(i)){ arr.splice(arr.indexOf(i),1); save(); renderSub('plans'); }
+  else { arr.push(i); save(); loadReading(ref); }
+}
+
+/* ============ BOOKMARKS ============ */
+function renderBookmarks(){
+  if(!state.bookmarks.length) return '<div class="empty"><div class="e-ico">🔖</div>No bookmarks yet.<br>Tap any verse while reading to save it.</div>';
+  return state.bookmarks.map(b=>`<div class="card tap" onclick="loadReading('${esc(b.ref.replace(/:.*/,''))}')">
+    <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:5px;">${esc(b.ref)}</div>
+    <div style="font-size:15px;line-height:1.6;color:var(--text-dim);">${esc(b.text||'').slice(0,160)}</div>
+  </div>`).join('');
+}
+
+/* ============ MY DATA ============ */
+function renderMyData(){
+  return `
+  <div class="card"><div style="font-weight:700;margin-bottom:6px;">📦 Your Data</div><div style="font-size:14px;color:var(--text-dim);line-height:1.7;">Everything in FocusWord — your journal, bookmarks, highlights, canvases, and streak — is stored privately on <b>this device only</b>. Nothing is sent to any server.</div></div>
+  <button class="btn btn-teal" onclick="exportData()">⬇ Export My Data (backup)</button>
+  <button class="btn btn-ghost" style="margin-top:12px;" onclick="importData()">⬆ Import Data</button>
+  <button class="btn btn-ghost" style="margin-top:12px;color:#e0607e;" onclick="wipeData()">🗑 Erase Everything</button>
+  <input type="file" id="importFile" accept=".json" style="display:none;" onchange="doImport(event)">`;
+}
+function exportData(){ const data={}; ['theme','trans','streak','chapters','bookmarks','highlights','journal','canvases','planProgress','readHistory'].forEach(k=>data[k]=state[k]); const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='focusword-backup.json'; a.click(); toast('Backup saved!'); }
+function importData(){ document.getElementById('importFile').click(); }
+function doImport(e){ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); Object.assign(state,d); save(); toast('Data imported!'); go('home'); }catch(err){ toast('Invalid file'); } }; r.readAsText(f); }
+function wipeData(){ if(!confirm('Erase ALL your data? This cannot be undone.'))return; if(!confirm('Are you absolutely sure?'))return; localStorage.clear(); location.reload(); }
+</script>
+<script>
+/* expandable card helper — optional sources: array of [label,url] */
+function exp(title,body,ico,sources){
+  let src='';
+  if(sources&&sources.length){
+    src='<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📚 Sources & Research</div>'+
+      sources.map(s=>`<a href="${s[1]}" target="_blank" style="display:block;color:var(--teal-soft);font-size:13px;font-weight:600;text-decoration:none;margin-bottom:7px;line-height:1.4;">↗ ${s[0]}</a>`).join('')+'</div>';
+  }
+  return `<div class="card tap" onclick="if(event.target.tagName==='A')return;const b=this.querySelector('.exp-body');b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.exp-arrow').textContent=b.style.display==='none'?'＋':'−'">
+  <div style="display:flex;align-items:center;gap:10px;"><div style="font-size:22px;">${ico||'•'}</div><div style="font-weight:700;flex:1;font-size:15px;">${title}</div><div class="exp-arrow" style="color:var(--purple-soft);font-size:20px;">＋</div></div>
+  <div class="exp-body" style="display:none;font-size:14px;line-height:1.75;color:var(--text-dim);margin-top:12px;">${body}${src}</div></div>`;
+}
+
+/* ============ SCIENCE & BRAIN ============ */
+function renderScience(){
+  return imgSlot('images/dopamine-divine.png','From Dopamine to the Divine')+`
+  <div class="card" style="border-color:var(--teal);"><div style="font-size:17px;font-weight:700;margin-bottom:8px;">🧠 Your Brain Is Not Broken</div><div style="font-size:14px;line-height:1.75;color:var(--text-dim);">The ADHD and autistic brain isn't damaged — it's <b style="color:var(--text)">wired differently</b>. Below, the <b style="color:var(--teal-soft)">science</b> is backed by real studies you can read yourself. Where we connect it to <b style="color:var(--gold)">faith</b>, we'll say so clearly — that part is interpretation, offered as encouragement, not as proven fact.</div></div>
+
+  <div class="section-title">The Science (with sources)</div>
+  ${exp('Dopamine & the reward system',
+    'Brain-imaging research led by Dr. Nora Volkow (head of the U.S. National Institute on Drug Abuse) found measurably <b>lower activity in the dopamine reward pathway</b> in adults with ADHD. Dopamine drives motivation and the ability to stick with tasks that aren\'t instantly rewarding. This is why a long, unbroken chapter can feel almost physically impossible to start — and why short cards, quick wins, and visible streaks help: each small reward gives your brain the dopamine signal it\'s short on.<br><br><span style="color:var(--gold);">Faith angle:</span> worship, gratitude, and awe are among the healthiest ways to engage that same reward system while drawing near to God.',
+    '⚡',
+    [['Volkow et al., JAMA 2009 — Dopamine Reward Pathway in ADHD','https://jamanetwork.com/journals/jama/fullarticle/184547'],['Brookhaven National Lab summary','https://www.bnl.gov/newsroom/news.php?a=110998'],['Molecular Psychiatry — Motivation deficit & dopamine','https://www.nature.com/articles/mp201097']])}
+  ${exp('Executive function & working memory',
+    'Dr. Russell Barkley\'s research frames ADHD largely as a difference in <b>executive function</b> — the brain\'s system for planning, starting, and finishing tasks — and in <b>working memory</b>, which holds less information at once. Long passages overload it. Breaking Scripture into one idea at a time ("chunking") keeps you within your brain\'s capacity so meaning actually sticks. FocusWord\'s Chunk mode does this for you.',
+    '🗂',
+    [['Barkley — Executive Functions & Self-Regulation (overview)','https://www.russellbarkley.org/factsheets/ADHD_EF_and_SR.pdf'],['CHADD — Executive Function & ADHD','https://chadd.org/about-adhd/executive-function-skills/']])}
+  ${exp('Novelty-seeking & the wandering mind',
+    'ADHD brains are strongly drawn to <b>novelty</b> — new, interesting, meaningful input. Studies link this to dopamine-system differences and to a busier "default mode network" (the brain\'s background chatter). That restless searching is real.<br><br><span style="color:var(--gold);">Faith angle:</span> many believers describe that same hunger for "something more" as ultimately a hunger for God — a compass, not a defect.',
+    '🔭',
+    [['Default Mode Network in ADHD (review, NIH/PMC)','https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3134681/']])}
+  ${exp('Hyperfocus — the flip side of attention',
+    'ADHD isn\'t only a deficit of attention; it\'s often <b>dysregulated</b> attention. When something genuinely grips an ADHD brain, it can lock in with extraordinary intensity — this is "hyperfocus," and it\'s documented in the research. Pointed at Scripture, apologetics, or prayer, it can produce a depth of study many people never reach. The skill is catching the wave when curiosity strikes.',
+    '🎯',
+    [['Hupfeld et al. — Hyperfocus in ADHD (study)','https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6612885/']])}
+  ${exp('Neuroplasticity — your brain rewires with repetition',
+    'Neuroplasticity is the well-established finding that the brain physically <b>rewires itself with repeated practice</b>. New, repeated routines carve new neural pathways. Practically: returning to the Word in tiny daily doses — even five minutes — gradually makes it more natural over weeks and months. You\'re literally reshaping your mind around what you repeat.',
+    '🔄',
+    [['Neuroplasticity overview (NIH/StatPearls)','https://www.ncbi.nlm.nih.gov/books/NBK557811/']])}
+  ${exp('Autism: pattern recognition & systemizing',
+    'Cambridge psychologist Simon Baron-Cohen\'s research describes a strong drive to <b>"systemize"</b> — to find the if-and-then rules and patterns in things — that is more common in autistic minds. Related work (Mottron, Happé) documents <b>enhanced attention to detail and pattern recognition</b>.<br><br><span style="color:var(--gold);">Faith angle:</span> Scripture is full of structure, repetition, and fulfilled prophecy. Many autistic believers describe being drawn to God through the sheer coherence and order woven across 66 books.',
+    '🧩',
+    [['Baron-Cohen — Autism, Hypersystemizing & Truth','https://journals.sagepub.com/doi/10.1080/17470210701508749'],['Mottron et al. — Enhanced Perceptual Functioning in Autism','https://link.springer.com/article/10.1007/s10803-005-0040-7'],['Baron-Cohen et al. 2009 — Talent in Autism (Royal Society)','https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2677592/']])}
+  ${exp('A different design — not a lesser one',
+    'Put the science together: a reward system tuned for meaning and novelty, a capacity for intense hyperfocus, and (for many autistic minds) a gift for pattern and detail.<br><br><span style="color:var(--gold);">Faith angle:</span> far from disqualifying you, these traits may be exactly the tools through which you encounter God most deeply. "I am fearfully and wonderfully made" (Psalm 139:14) — including how your brain works.',
+    '✨',
+    [['Psalm 139 — read it','javascript:loadReading(\'Psalm 139\')']])}
+
+  <div class="section-title">Study Methods Proven to Help</div>
+  ${exp('Chunking','Read one verse or one idea at a time instead of whole chapters. It keeps you inside working-memory limits so meaning lands. Turn on Chunk mode in the Read tab.','🍱')}
+  ${exp('Read aloud','Hearing the words adds a second sensory channel, which helps anchor wandering attention. Tap the 🔊 button on any verse to have it read to you.','🔊')}
+  ${exp('SOAP Method','Scripture, Observation, Application, Prayer — a simple 4-step structure that gives your brain a clear finish line. There\'s a SOAP card in the Focus Timer.','✍')}
+  ${exp('Visual mapping','Drag verses onto a canvas, connect ideas with lines, draw freely. Visual-spatial thinking is a strength for many neurodivergent people. That\'s the whole Canvas tab.','🗺')}
+
+  <div class="section-title">Go Deeper</div>
+  <a class="btn btn-teal" href="https://chadd.org/about-adhd/overview/" target="_blank" style="text-decoration:none;margin-bottom:10px;">CHADD — Understanding ADHD</a>
+  <a class="btn btn-teal" href="https://www.additudemag.com/category/manage-adhd-life/adhd-brain/" target="_blank" style="text-decoration:none;margin-bottom:10px;">ADDitude — Inside the ADHD Brain</a>
+  <a class="btn btn-teal" href="https://www.autismresearchcentre.com/" target="_blank" style="text-decoration:none;margin-bottom:10px;">Autism Research Centre (Cambridge)</a>
+  <div class="card" style="border-color:var(--gold);margin-top:8px;font-size:12px;color:var(--text-faint);line-height:1.6;">A note on honesty: the brain-science links above are peer-reviewed. The "faith angle" notes are spiritual encouragement and reflection — they're meaningful, but they're interpretation, not laboratory findings. We think you deserve to know the difference.</div>`;
+}
+
+/* ============ EVANGELISM / START HERE ============ */
+function renderEvangelism(){
+  return imgSlot('images/moment-before.png','The Moment Before Everything Changed')+`
+  <div class="card" style="border-color:var(--gold);"><div style="font-size:18px;font-weight:700;margin-bottom:8px;">Is Any of This Actually True?</div><div style="font-size:14px;line-height:1.75;color:var(--text-dim);">Good question. A faith that can\'t handle hard questions isn\'t worth having. The good news: Christianity makes <b style="color:var(--text)">historical claims</b> you can actually investigate. Here\'s some of the evidence people find compelling. Take your time. Doubt the doubts too.</div></div>
+  <div class="section-title">The Evidence</div>
+  ${exp('Archaeology backs the Bible','For centuries skeptics claimed Bible people and places were myths — the Hittites, the city of Nineveh, Pontius Pilate. One by one, archaeology has unearthed them. The Pilate Stone (1961) and countless digs keep confirming names, places, and customs the Bible describes.','🏺',
+    [['Biblical Archaeology Society','https://www.biblicalarchaeology.org/'],['The Pilate Stone (overview)','https://www.biblicalarchaeology.org/daily/biblical-sites-places/biblical-archaeology-sites/pontius-pilate/']])}
+  ${exp('Manuscript evidence','There are over 5,800 Greek New Testament manuscripts, plus thousands more in other languages — vastly more than any other ancient text. The Dead Sea Scrolls (found 1947) showed the Old Testament was copied with remarkable faithfulness across a thousand years.','📜',
+    [['Dead Sea Scrolls — official digital library','https://www.deadseascrolls.org.il/'],['Museum of the Bible','https://www.museumofthebible.org/']])}
+  ${exp('Jesus in non-Christian history','Jesus isn\'t only in the Bible. Roman and Jewish writers who weren\'t believers — Josephus, Tacitus, and Pliny the Younger — all reference Jesus, His execution under Pilate, and His early followers worshiping Him as God. Even hostile sources confirm the basic facts.','🏛',
+    [['Tacitus on Christ (Annals 15.44)','https://www.gotquestions.org/Jesus-historical.html']])}
+  ${exp('The C.S. Lewis Trilemma','Lewis argued Jesus left no middle ground. A man saying what He said about Himself is either a liar, a lunatic, or telling the truth — Lord. "A great moral teacher" isn\'t an option for someone claiming to forgive sins and be God.','⚖',
+    [['Mere Christianity (about the book)','https://www.cslewis.com/us/books/paperback/mere-christianity/9780060652920/']])}
+  ${exp('The fine-tuning of the universe','The constants of physics — gravity, the strong force, the cosmic expansion rate — sit on a knife\'s edge. Nudge them slightly and life is impossible. Many scientists and philosophers see design in this precise calibration rather than blind chance.','🌌',
+    [['Stanford Encyclopedia — Fine-Tuning','https://plato.stanford.edu/entries/fine-tuning/']])}
+  ${exp('God welcomes your questions','The ADHD mind questions everything — and that\'s healthy. Scripture is full of people who argued with God: Job, David, Thomas, even Jacob who literally wrestled Him. God isn\'t threatened by your doubts. He meets honest seekers.','🤔')}
+  <div class="section-title">Dig Deeper</div>
+  <a class="btn btn-teal" href="https://coldcasechristianity.com" target="_blank" style="text-decoration:none;margin-bottom:10px;">🔎 Cold Case Christianity (J. Warner Wallace)</a>
+  <a class="btn btn-teal" href="https://www.reasonablefaith.org" target="_blank" style="text-decoration:none;margin-bottom:10px;">🧠 Reasonable Faith (William Lane Craig)</a>
+  <a class="btn btn-teal" href="https://www.str.org" target="_blank" style="text-decoration:none;margin-bottom:10px;">💬 Stand to Reason</a>
+  <a class="btn btn-teal" href="https://www.gotquestions.org" target="_blank" style="text-decoration:none;margin-bottom:10px;">❓ GotQuestions — search any question</a>
+  <a class="btn btn-teal" href="https://bibleproject.com" target="_blank" style="text-decoration:none;margin-bottom:10px;">🎬 The Bible Project (free videos)</a>
+  <div class="card" style="border-color:var(--purple-soft);margin-top:8px;"><div style="font-weight:700;margin-bottom:8px;">Ready to take a step?</div><div style="font-size:14px;line-height:1.7;color:var(--text-dim);">You don\'t need perfect faith — just a willing heart. You can talk to God right now in your own words. Tell Him you\'re searching, ask Him to show you what\'s true. Then open John 1 and start reading.</div><button class="btn btn-primary" style="margin-top:12px;" onclick="loadReading('John 1')">Start in John 1 →</button></div>`;
+}
+
+/* ============ TESTIMONIES ============ */
+function renderTestimonies(){
+  return imgSlot('images/found-static.png','Found in the Static')+`
+  <div style="font-size:14px;color:var(--text-dim);line-height:1.7;margin-bottom:8px;padding:0 4px;">Three stories of neurodivergent minds finding faith. <span style="font-style:italic;opacity:.8;">(Composite stories, written to reflect real journeys.)</span></div>
+  <div class="card">
+    <div style="font-weight:700;font-size:17px;color:var(--teal-soft);">Marcus, 24</div>
+    <div style="font-size:12px;color:var(--gold);font-weight:600;margin-bottom:10px;">ADHD + Anxiety</div>
+    <div style="font-size:14.5px;line-height:1.8;color:var(--text-dim);">
+      <p style="margin-bottom:10px;">Marcus could never sit still in church. Sermons slid right off him, and the anxiety made it worse — his mind racing three directions while everyone else looked peaceful. He decided faith just wasn\'t for brains like his.</p>
+      <p style="margin-bottom:10px;">Then one sleepless 2am he fell down a rabbit hole: a debate about whether Jesus really rose from the dead. His hyperfocus kicked in hard. For three weeks he devoured everything — manuscripts, the empty tomb, the wild courage of the disciples. The same brain that couldn\'t survive a sermon couldn\'t stop.</p>
+      <p style="margin-bottom:10px;">The evidence wore down his defenses. But it was the moment he whispered a clumsy first prayer that the racing in his chest went quiet for the first time he could remember.</p>
+      <p>"I thought my brain disqualified me," he says. "Turns out it was the exact tool God used to reach me."</p>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-weight:700;font-size:17px;color:var(--teal-soft);">Sarah, 17</div>
+    <div style="font-size:12px;color:var(--gold);font-weight:600;margin-bottom:10px;">Autism + ADHD</div>
+    <div style="font-size:14.5px;line-height:1.8;color:var(--text-dim);">
+      <p style="margin-bottom:10px;">Sarah loved systems — train timetables, the periodic table, anything with hidden order. People were confusing, but patterns made sense. When a friend dared her to "find the contradictions" in the Bible, she took it as a project.</p>
+      <p style="margin-bottom:10px;">She built a spreadsheet. But instead of contradictions, she kept finding threads — prophecies written centuries before lining up with later events, themes woven from Genesis to Revelation like one enormous, deliberate design. Her pattern-loving mind lit up.</p>
+      <p style="margin-bottom:10px;">"It was too consistent to be an accident," she says. "It read like one Author behind sixty-six books and a thousand years."</p>
+      <p>The order she\'d always craved in the world, she found in its Maker. She got baptized last spring — and still has the spreadsheet.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-weight:700;font-size:17px;color:var(--teal-soft);">David, 35</div>
+    <div style="font-size:12px;color:var(--gold);font-weight:600;margin-bottom:10px;">ADHD · Divorced · Struggling</div>
+    <div style="font-size:14.5px;line-height:1.8;color:var(--text-dim);">
+      <p style="margin-bottom:10px;">David\'s life had come apart — the divorce, the missed bills, the ADHD he\'d masked for years finally catching up. At 2am, awake again, he found an old Bible and opened it at random to the Psalms.</p>
+      <p style="margin-bottom:10px;">He expected polished religious language. Instead he found David — another David — screaming at God, asking how long, admitting he was drowning. Raw. Honest. Messy. It didn\'t sound like religion. It sounded like him.</p>
+      <p style="margin-bottom:10px;">"Nobody told me you were allowed to talk to God like that," he says. "That you could be a wreck and still be heard."</p>
+      <p>He started reading one Psalm every sleepless night. Slowly the 2am dread turned into 2am conversation. He\'s still rebuilding — but he\'s not doing it alone anymore.</p>
+    </div>
+  </div>`;
+}
+
+/* ============ COMMUNITY ============ */
+function renderCommunity(){
+  const comms=[
+    ['r/Christianity','A huge, welcoming Reddit community for questions and discussion','https://www.reddit.com/r/Christianity/','💬'],
+    ['ADHD Christians (Facebook)','A group for believers navigating faith with ADHD','https://www.facebook.com/groups/','🧠'],
+    ['The Bible Project','Free, beautiful videos + community exploring Scripture','https://bibleproject.com','🎬'],
+    ['Find a Local Church','Search for a church family near you','https://www.church.com','⛪'],
+    ['YouVersion Community','Connect, share verses, and read with friends','https://www.bible.com','📲']
+  ];
+  return `<div style="font-size:15px;font-weight:700;margin:0 4px 12px;">Find Your People</div>
+  <div style="font-size:14px;color:var(--text-dim);line-height:1.7;margin:0 4px 16px;">Faith was never meant to be done alone. These communities welcome questions, doubts, and neurodivergent minds.</div>
+  ${comms.map(c=>`<a class="card tap" href="${c[2]}" target="_blank" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:14px;">
+    <div style="font-size:26px;">${c[3]}</div>
+    <div style="flex:1;"><div style="font-weight:700;">${c[0]}</div><div style="font-size:13px;color:var(--text-dim);">${c[1]}</div></div>
+    <div style="color:var(--text-faint);">↗</div></a>`).join('')}`;
+}
+
+/* ============ VIDEOS & LINKS ============ */
+const VIDEOS=[
+  ['cx4UB9bFHhU','How to ADHD','ADHD'],['AN-G2wcq0Os','ADHD TED Talk','ADHD'],
+  ['pB1OSMBWink','ADHD and Spiritual Life','Faith'],['ak06MSETeo4','Study the Bible with ADHD','Bible'],
+  ['0IDMsICgbGE','How to Pray with ADHD','Prayer'],['UZLC4OaRVvs','Parenting ADHD & Faith','Family']
+];
+const LINKS=[
+  ['HowToADHD (YouTube)','https://www.youtube.com/@HowtoADHD','ADHD'],['ADDitude Magazine','https://www.additudemag.com','ADHD'],
+  ['CHADD (National ADHD org)','https://chadd.org','ADHD'],['ADHD Online — resources','https://www.adhdonline.com/blog/','ADHD'],
+  ['Understood.org (learning & ADHD)','https://www.understood.org','ADHD'],['Autism Research Centre','https://www.autismresearchcentre.com','ADHD'],
+  ['ADHD Bible','https://adhdbible.org','Faith'],['GotQuestions','https://www.gotquestions.org','Faith'],
+  ['Cold Case Christianity','https://coldcasechristianity.com','Faith'],['Reasonable Faith','https://www.reasonablefaith.org','Faith'],
+  ['Stand to Reason','https://www.str.org','Faith'],['Desiring God','https://www.desiringgod.org','Faith'],
+  ['Blue Letter Bible (study tools)','https://www.blueletterbible.org','Bible'],['Bible Hub (interlinear)','https://biblehub.com','Bible'],
+  ['The Bible Project','https://bibleproject.com','Bible'],['Bible Gateway','https://www.biblegateway.com','Bible'],
+  ['STEP Bible (free originals)','https://www.stepbible.org','Bible'],['YouVersion / Bible.com','https://www.bible.com','Bible'],
+  ['24-7 Prayer','https://www.24-7prayer.com','Prayer'],['Sacred Space (daily prayer)','https://www.sacredspace.com','Prayer'],
+  ['Pray-As-You-Go','https://pray-as-you-go.org','Prayer'],['Lectio 365 app','https://www.24-7prayer.com/resource/lectio-365/','Prayer'],
+  ['Children Desiring God','https://childrendesiringgod.org','Family'],['Focus on the Family: ADHD','https://www.focusonthefamily.com/parenting/parenting-a-child-with-adhd/','Family'],
+  ['Key Ministry (disability & church)','https://www.keyministry.org','Family'],['ADDitude — Parenting ADHD','https://www.additudemag.com/category/parenting-adhd-kids/','Family']
+];
+let vidFilter='All';
+function renderVideos(){
+  const cats=['All','ADHD','Faith','Bible','Prayer','Family'];
+  const vids=VIDEOS.filter(v=>vidFilter==='All'||v[2]===vidFilter);
+  const links=LINKS.filter(l=>vidFilter==='All'||l[2]===vidFilter);
+  return `<div class="row" style="margin-bottom:14px;">${cats.map(c=>`<span class="pill ${vidFilter===c?'active':''}" onclick="vidFilter='${c}';renderSub('videos')">${c}</span>`).join('')}</div>
+  ${vids.length?'<div class="section-title">Watch</div>':''}
+  ${vids.map(v=>`<div class="card" style="padding:0;overflow:hidden;"><div style="position:relative;padding-bottom:56.25%;height:0;"><iframe src="https://www.youtube.com/embed/${v[0]}" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allowfullscreen loading="lazy"></iframe></div><div style="padding:10px 14px;font-weight:600;font-size:14px;">${v[1]}</div></div>`).join('')}
+  ${links.length?'<div class="section-title">Helpful Links</div>':''}
+  ${links.map(l=>`<a class="card tap" href="${l[1]}" target="_blank" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:12px;padding:14px;"><div style="font-size:18px;">🔗</div><div style="flex:1;font-weight:600;">${l[0]}</div><div style="color:var(--text-faint);">↗</div></a>`).join('')}`;
+}
+</script>
+<script>
+/* ============ INIT ============ */
+function injectIcons(){
+  // Quick-access cards: icon goes into the .qa-ic child, larger size
+  document.querySelectorAll('.qa[data-ic]').forEach(el=>{
+    if(el._iconed) return;
+    const slot=el.querySelector('.qa-ic'); if(slot){ slot.innerHTML=ICON(el.getAttribute('data-ic'),30); el._iconed=true; }
+  });
+  // Everything else with data-ic: icon is the element's content
+  document.querySelectorAll('[data-ic]:not(.qa)').forEach(el=>{
+    const n=el.getAttribute('data-ic');
+    if(n && !el._iconed){ el.innerHTML=ICON(n, el.classList.contains('ti')?23:20); el._iconed=true; }
+  });
+  // top-bar brain+cross logo (falls back to a glyph if image missing)
+  const tl=document.getElementById('topLogo');
+  if(tl && !tl._done){
+    tl.innerHTML=`<img src="images/cross-mind.png" alt="" onerror="this.parentElement.innerHTML='✝';this.parentElement.style.background='linear-gradient(135deg,var(--purple),var(--teal))';this.parentElement.style.color='#fff';">`;
+    tl._done=true;
+  }
+}
+function boot(){
+  // Each step is isolated so one failure can never crash the whole app.
+  var fails=[];
+  try{ setTheme(state.theme); }catch(e){ fails.push('theme: '+e.message); }
+  try{ injectIcons(); }catch(e){ fails.push('icons: '+e.message); }
+  try{ const ts=document.getElementById('transSelect'); if(ts) ts.value=state.trans; }catch(e){ fails.push('trans: '+e.message); }
+  try{ renderHome(); }catch(e){ fails.push('home: '+e.message); }
+  try{ animateSub(); }catch(e){ fails.push('sub: '+e.message); }
+  // If something genuinely broke in our own code, surface the REAL message
+  // (not the generic browser one) so it can be diagnosed.
+  if(fails.length){
+    try{
+      var d=document.createElement('div');
+      d.style.cssText='position:fixed;bottom:80px;left:8px;right:8px;z-index:9999;background:#2a0d12;color:#ffb4b4;border:1px solid #e0607e;border-radius:12px;padding:12px;font:13px/1.5 monospace;';
+      d.textContent='Boot notices: '+fails.join(' | ');
+      document.body.appendChild(d);
+    }catch(e){}
+  }
+}
+// Swallow harmless cross-origin "Script error." noise (e.g. Google Fonts / API)
+// so it never shows the user a scary red box. Real errors still log to console.
+window.addEventListener('error', function(ev){
+  if(!ev.message || ev.message==='Script error.' || ev.message==='Script error'){
+    ev.preventDefault(); return false;
+  }
+}, true);
+window.addEventListener('unhandledrejection', function(ev){ ev.preventDefault(); });
+
+if(document.readyState==='complete' || document.readyState==='interactive'){ boot(); }
+else { window.addEventListener('load',boot); }
+
+// Clean up any old service worker + caches from earlier versions.
+// (These were a likely source of the stale "Script error." and aren't needed.)
+try{
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+  }
+  if(window.caches && caches.keys){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k))).catch(()=>{}); }
+}catch(e){}
+</script>
+</body>
+</html>
