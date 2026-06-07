@@ -311,66 +311,11 @@ function EmblemDefs() {
   );
 }
 
-// ---- Sacred Wall environment system ----
-const ENV_BASE = "images/wall/environments/";   // relative path (correct for GitHub Pages project site)
-const ENV_OPACITY = 0.32;                        // ~32% visible so the plaques stay the hero
-const ENV_FILES = ["law.JPG", "history.JPG", "wisdom.JPG", "major_prophets.JPG", "minor_prophets.JPG",
-  "gospels.JPG", "acts.JPG", "pauline_letters.JPG", "pastoral_letters.JPG", "general_epistles.JPG",
-  "hebrews.JPG", "revelation.JPG"];
-// Explicit mapping (matches the requested groups, not the internal category field)
-function envFile(book) {
-  if (!book) return "law.JPG";
-  const n = book.number;
-  if (n <= 5) return "law.JPG";                  // Genesis–Deuteronomy
-  if (n <= 17) return "history.JPG";             // Joshua–Esther
-  if (n <= 22) return "wisdom.JPG";              // Job–Song of Solomon
-  if (n <= 27) return "major_prophets.JPG";      // Isaiah–Daniel
-  if (n <= 39) return "minor_prophets.JPG";      // Hosea–Malachi
-  if (n <= 43) return "gospels.JPG";             // Matthew–John
-  if (n === 44) return "acts.JPG";               // Acts
-  if (n === 58) return "hebrews.JPG";            // Hebrews
-  if (n === 66) return "revelation.JPG";         // Revelation
-  if (n >= 59 && n <= 65) return "general_epistles.JPG";  // James–Jude
-  if (n >= 54 && n <= 56) return "pastoral_letters.JPG";  // 1 Timothy, 2 Timothy, Titus
-  return "pauline_letters.JPG";                  // Romans–2 Thess + Philemon
-}
-// Full-screen backdrop that crossfades (1500ms) when the environment changes
-function EnvLayer({ src, parallaxRef }) {
-  const [layers, setLayers] = useState(src ? [{ key: 0, src, on: true }] : []);
-  const idRef = useRef(0);
-  useEffect(() => {
-    if (!src) return;
-    setLayers((ls) => {
-      const last = ls[ls.length - 1];
-      if (last && last.src === src) return ls;                 // already showing it
-      return [...ls.slice(-1), { key: ++idRef.current, src, on: false }];
-    });
-  }, [src]);
-  useEffect(() => {                                            // fade the new layer in
-    const pending = layers.find((l) => !l.on);
-    if (!pending) return;
-    const r = requestAnimationFrame(() => requestAnimationFrame(() =>
-      setLayers((ls) => ls.map((l) => (l.key === pending.key ? { ...l, on: true } : l)))));
-    return () => cancelAnimationFrame(r);
-  }, [layers]);
-  useEffect(() => {                                            // drop the old layer after the fade
-    if (layers.length <= 1) return;
-    const to = setTimeout(() => setLayers((ls) => ls.slice(-1)), 1700);
-    return () => clearTimeout(to);
-  }, [layers]);
-  return (
-    <div ref={parallaxRef} style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
-      transform: "scale(1.16)", willChange: "transform" }}>
-      {layers.map((l, i) => (
-        <div key={l.key} style={{ position: "absolute", inset: 0,
-          backgroundImage: `url("${ENV_BASE}${l.src}")`, backgroundSize: "cover", backgroundPosition: "center",
-          filter: "saturate(0.82)",
-          opacity: (i === layers.length - 1 && l.on) ? ENV_OPACITY : 0,
-          transition: "opacity 1500ms ease" }} />
-      ))}
-    </div>
-  );
-}
+// ---- Sacred Wall "Bible Journey" panorama (one continuous background) ----
+// Genesis sits at the far left of the image, Revelation at the far right.
+// The panorama pans horizontally as you scroll the wall (gentle parallax).
+const PANO_SRC = "images/wall/environments/bible-journey-panorama.JPG";
+const PANO_OPACITY = 0.92;       // clearly visible, with a light scrim for plaque readability
 
 function Plaque({ book, focused, onClick, reflection = false }) {
   const ac = accent(book.testament);
@@ -638,7 +583,7 @@ export default function FocusWordBibleWall() {
   const scale = Math.max(0.42, Math.min(1.15, Math.min(vp.w / 1180, vp.h / 760)));
   const isNarrow = vp.w < 760;
 
-  useEffect(() => { ENV_FILES.forEach((f) => { const im = new Image(); im.src = ENV_BASE + f; }); }, []);
+  useEffect(() => { const im = new Image(); im.src = PANO_SRC; }, []);
 
   useEffect(() => {
     const MAXC = COLS - 1;
@@ -672,11 +617,11 @@ export default function FocusWordBibleWall() {
       if (stripRef.current) stripRef.current.style.transform = t;
       if (reflRef.current) reflRef.current.style.transform = t;
 
-      // gentle background parallax — moves much slower than the wall (subconscious)
+      // pan the panorama: Genesis at the left edge -> Revelation at the right edge.
+      // it spans all 66 books in one image, so it drifts much slower than the wall.
       if (envRef.current) {
-        const frac = MAXC > 0 ? p / MAXC : 0;
-        const shift = (frac - 0.5) * 40; // about ±20px across the whole wall
-        envRef.current.style.transform = `translate3d(${-shift}px,0,0) scale(1.16)`;
+        const frac = MAXC > 0 ? Math.max(0, Math.min(1, p / MAXC)) : 0;
+        envRef.current.style.backgroundPositionX = `${(frac * 100).toFixed(2)}%`;
       }
 
       const col = clamp(Math.round(p));
@@ -686,7 +631,7 @@ export default function FocusWordBibleWall() {
         if (!pinned.current) {
           const b = OT[col] || NT[col];
           setActive(b);
-          if (b) console.log(`Focused Book: ${b.name}\nEnvironment: ${envFile(b)}`);
+          if (b) console.log(`Focused Book: ${b.name}`);
         }
       }
       rafId.current = requestAnimationFrame(tick);
@@ -789,11 +734,14 @@ export default function FocusWordBibleWall() {
           color: "#e8eaf6", fontFamily: "'Trebuchet MS','Segoe UI',sans-serif", userSelect: "none",
           perspective: `${PERSPECTIVE}px`, perspectiveOrigin: "50% 46%", touchAction: "none" }}
       >
-        {/* Sacred Wall environment — cinematic backdrop behind the books */}
-        <EnvLayer src={envFile(active)} parallaxRef={envRef} />
-        <div style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none", background: "rgba(4,4,12,0.42)" }} />
+        {/* Bible Journey panorama — one continuous backdrop that pans with the wall */}
+        <div ref={envRef} style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
+          backgroundImage: `url("${PANO_SRC}")`, backgroundSize: "cover", backgroundPosition: "0% center",
+          backgroundRepeat: "no-repeat", opacity: PANO_OPACITY }} />
+        {/* light scrim + vignette so the plaques stay the hero, but the world is clearly visible */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none", background: "rgba(3,3,10,0.18)" }} />
         <div style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
-          background: "radial-gradient(125% 110% at 50% 42%, transparent 36%, rgba(2,2,8,0.74) 100%)" }} />
+          background: "radial-gradient(135% 115% at 50% 45%, transparent 50%, rgba(2,2,8,0.6) 100%)" }} />
 
         <EmblemDefs />
         <div style={{ position: "absolute", top: 20, left: 0, right: 0, textAlign: "center", fontSize: 12, letterSpacing: 7, opacity: 0.45, zIndex: 6, fontFamily: "Georgia, serif" }}>
