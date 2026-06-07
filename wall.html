@@ -3327,6 +3327,73 @@ const BOOK_MAPS = {
       label: "Cleansing",
       ch: [14, 15]
     }]
+  },
+  "Exodus": {
+    file: "exodus",
+    hotspots: [{
+      x: 4,
+      y: 4,
+      w: 22,
+      h: 32,
+      label: "Pharaoh & the Plagues",
+      ch: [5, 11]
+    }, {
+      x: 0,
+      y: 40,
+      w: 26,
+      h: 30,
+      label: "Slavery in Egypt",
+      ch: [1, 2]
+    }, {
+      x: 2,
+      y: 60,
+      w: 22,
+      h: 38,
+      label: "The Burning Bush",
+      ch: [3, 4]
+    }, {
+      x: 28,
+      y: 80,
+      w: 18,
+      h: 18,
+      label: "Passover Lamb",
+      ch: [12, 12]
+    }, {
+      x: 42,
+      y: 50,
+      w: 22,
+      h: 46,
+      label: "Red Sea Crossing",
+      ch: [14, 15]
+    }, {
+      x: 38,
+      y: 0,
+      w: 26,
+      h: 32,
+      label: "Cloud, Fire & Wilderness",
+      ch: [13, 18]
+    }, {
+      x: 76,
+      y: 6,
+      w: 24,
+      h: 38,
+      label: "Mount Sinai",
+      ch: [19, 19]
+    }, {
+      x: 83,
+      y: 30,
+      w: 16,
+      h: 28,
+      label: "Ten Commandments",
+      ch: [20, 24]
+    }, {
+      x: 60,
+      y: 58,
+      w: 40,
+      h: 40,
+      label: "The Tabernacle",
+      ch: [25, 40]
+    }]
   }
 };
 function bookMap(book) {
@@ -3338,7 +3405,21 @@ function chList(ch) {
   return out;
 }
 function mapCandidates(file) {
-  return ["JPG", "jpg", "jpeg", "png", "PNG", "webp"].map(e => `${MAP_BASE}${file}.${e}`);
+  const cap = file.charAt(0).toUpperCase() + file.slice(1);
+  const capWords = file.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("-");
+  const stems = [file, cap, capWords];
+  const bases = [MAP_BASE, "images/wall/", "images/"];
+  const exts = ["PNG", "png", "JPG", "jpg", "jpeg", "webp"];
+  const seen = {},
+    out = [];
+  stems.forEach(s => bases.forEach(b => exts.forEach(e => {
+    const u = `${b}${s}.${e}`;
+    if (!seen[u]) {
+      seen[u] = 1;
+      out.push(u);
+    }
+  })));
+  return out;
 }
 
 // Full visual map: tap a glowing point -> floating card of that section's chapters
@@ -3399,14 +3480,22 @@ function MapView({
       opacity: ok ? 1 : 0,
       transition: "opacity .4s ease"
     }
-  }), !ok && /*#__PURE__*/React.createElement("div", {
+  }), !ok && src && /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "70px 0",
       textAlign: "center",
       color: "#9a93b5",
       fontSize: 13
     }
-  }, "Loading map\u2026"), ok && map.hotspots.map((h, idx) => /*#__PURE__*/React.createElement("button", {
+  }, "Loading map\u2026"), !ok && !src && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "50px 20px",
+      textAlign: "center",
+      color: "#c9a96a",
+      fontSize: 13,
+      lineHeight: 1.6
+    }
+  }, "Map image not found.", /*#__PURE__*/React.createElement("br", null), "Add it at ", /*#__PURE__*/React.createElement("b", null, MAP_BASE, map.file, ".PNG")), ok && map.hotspots.map((h, idx) => /*#__PURE__*/React.createElement("button", {
     key: idx,
     onClick: () => setSpot(h),
     "aria-label": h.label,
