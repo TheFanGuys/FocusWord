@@ -3903,6 +3903,23 @@ function BookDetail({
   }, c)))));
 }
 
+// ---- Text highlighting (saved on the device, redrawn each visit) --------
+const HL_KEY = "fw_textHL";
+function loadHLAll() {
+  try {
+    return JSON.parse(localStorage.getItem(HL_KEY) || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+function saveHLAll(o) {
+  try {
+    localStorage.setItem(HL_KEY, JSON.stringify(o));
+  } catch (e) {}
+}
+const HL_COLORS = ["#f2c14e", "#48b4ff", "#b07dff", "#46c08a", "#ec6a86"];
+const cleanV = t => String(t).replace(/\s+/g, " ").trim();
+
 // Loads the actual chapter text live (same source the app uses)
 function ChapterReader({
   book,
@@ -3911,11 +3928,16 @@ function ChapterReader({
   setChapter,
   ac
 }) {
+  const refKey = `${book.name} ${chapter}`;
   const [st, setSt] = useState({
     loading: true,
     error: null,
     data: null
   });
+  const [hl, setHl] = useState([]);
+  const [barOpen, setBarOpen] = useState(false);
+  const pending = useRef([]);
+  const boxRef = useRef(null);
   useEffect(() => {
     let alive = true;
     setSt({
@@ -3923,7 +3945,8 @@ function ChapterReader({
       error: null,
       data: null
     });
-    const ref = encodeURIComponent(`${book.name} ${chapter}`);
+    setHl(loadHLAll()[refKey] || []);
+    const ref = encodeURIComponent(refKey);
     fetch(`https://bible-api.com/${ref}?translation=kjv`).then(r => {
       if (!r.ok) throw new Error("Couldn't load this chapter.");
       return r.json();
@@ -3944,11 +3967,162 @@ function ChapterReader({
       alive = false;
     };
   }, [book, chapter]);
+  const persist = arr => {
+    const all = loadHLAll();
+    all[refKey] = arr;
+    saveHLAll(all);
+  };
+
+  // Watch text selection and work out which verses + characters are covered
+  useEffect(() => {
+    const onSel = () => {
+      const box = boxRef.current;
+      if (!box) {
+        setBarOpen(false);
+        return;
+      }
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+        setBarOpen(false);
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      if (!box.contains(range.startContainer) || !box.contains(range.endContainer)) {
+        setBarOpen(false);
+        return;
+      }
+      const vEl = node => {
+        const el = node.nodeType === 3 ? node.parentNode : node;
+        return el && el.closest ? el.closest("[data-v]") : null;
+      };
+      const sEl = vEl(range.startContainer),
+        eEl = vEl(range.endContainer);
+      if (!sEl || !eEl) {
+        setBarOpen(false);
+        return;
+      }
+      const off = (el, node, o) => {
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        r.setEnd(node, o);
+        return r.toString().length;
+      };
+      const verses = st.data && st.data.verses || [];
+      const sV = +sEl.getAttribute("data-v"),
+        eV = +eEl.getAttribute("data-v");
+      const out = [];
+      if (sEl === eEl) {
+        const s = off(sEl, range.startContainer, range.startOffset);
+        const e = off(eEl, range.endContainer, range.endOffset);
+        if (e > s) out.push({
+          v: sV,
+          s,
+          e
+        });
+      } else {
+        out.push({
+          v: sV,
+          s: off(sEl, range.startContainer, range.startOffset),
+          e: sEl.textContent.length
+        });
+        verses.forEach(x => {
+          if (x.verse > sV && x.verse < eV) out.push({
+            v: x.verse,
+            s: 0,
+            e: cleanV(x.text).length
+          });
+        });
+        const ee = off(eEl, range.endContainer, range.endOffset);
+        if (ee > 0) out.push({
+          v: eV,
+          s: 0,
+          e: ee
+        });
+      }
+      pending.current = out;
+      setBarOpen(out.length > 0);
+    };
+    document.addEventListener("selectionchange", onSel);
+    return () => document.removeEventListener("selectionchange", onSel);
+  }, [st.data]);
+  const apply = color => {
+    const ranges = pending.current;
+    if (!ranges.length) return;
+    const id = "" + Date.now() + Math.floor(Math.random() * 1000);
+    const next = hl.concat(ranges.map(r => ({
+      v: r.v,
+      s: r.s,
+      e: r.e,
+      c: color,
+      id
+    })));
+    setHl(next);
+    persist(next);
+    const sel = window.getSelection();
+    if (sel) sel.removeAllRanges();
+    pending.current = [];
+    setBarOpen(false);
+  };
+  const removeId = id => {
+    const next = hl.filter(r => r.id !== id);
+    setHl(next);
+    persist(next);
+  };
+  const dismiss = () => {
+    const sel = window.getSelection();
+    if (sel) sel.removeAllRanges();
+    setBarOpen(false);
+  };
+  const renderVerse = v => {
+    const text = cleanV(v.text);
+    const ranges = hl.filter(r => r.v === v.verse);
+    if (!ranges.length) return text;
+    const colorAt = new Array(text.length).fill(null);
+    ranges.forEach(r => {
+      const s = Math.max(0, r.s),
+        e = Math.min(text.length, r.e);
+      for (let i = s; i < e; i++) colorAt[i] = {
+        c: r.c,
+        id: r.id
+      };
+    });
+    const same = (a, b) => a && b ? a.id === b.id : a === b;
+    const segs = [];
+    let i = 0;
+    while (i < text.length) {
+      const cur = colorAt[i];
+      let j = i + 1;
+      while (j < text.length && same(colorAt[j], cur)) j++;
+      segs.push({
+        t: text.slice(i, j),
+        m: cur
+      });
+      i = j;
+    }
+    return segs.map((sg, k) => sg.m ? /*#__PURE__*/React.createElement("mark", {
+      key: k,
+      onClick: e => {
+        e.stopPropagation();
+        removeId(sg.m.id);
+      },
+      style: {
+        background: sg.m.c,
+        color: "#160f02",
+        borderRadius: 3,
+        padding: "0 1px",
+        cursor: "pointer",
+        WebkitBoxDecorationBreak: "clone",
+        boxDecorationBreak: "clone"
+      }
+    }, sg.t) : /*#__PURE__*/React.createElement(React.Fragment, {
+      key: k
+    }, sg.t));
+  };
   return /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 760,
       margin: "0 auto",
-      padding: "4px 0 70px"
+      padding: "4px 0 90px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3961,10 +4135,17 @@ function ChapterReader({
       fontWeight: 800,
       fontFamily: "Georgia, serif"
     }
-  }, book.name, " ", chapter)), /*#__PURE__*/React.createElement("div", {
+  }, book.name, " ", chapter), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      opacity: 0.55,
+      marginTop: 4
+    }
+  }, "Select any words to highlight \xB7 tap a highlight to remove it")), /*#__PURE__*/React.createElement("div", {
+    ref: boxRef,
     style: {
       padding: "14px 20px 0",
-      lineHeight: 1.75,
+      lineHeight: 1.9,
       fontSize: 17
     }
   }, st.loading && /*#__PURE__*/React.createElement("div", {
@@ -3988,7 +4169,10 @@ function ChapterReader({
       fontSize: 11,
       marginRight: 4
     }
-  }, v.verse), String(v.text).replace(/\s+/g, " ").trim(), " "))), /*#__PURE__*/React.createElement("div", {
+  }, v.verse), /*#__PURE__*/React.createElement("span", {
+    className: "vt",
+    "data-v": v.verse
+  }, renderVerse(v)), " "))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
@@ -4014,7 +4198,54 @@ function ChapterReader({
       window.scrollTo(0, 0);
     },
     style: navStyle(chapter >= total, ac)
-  }, "Next \u203A")));
+  }, "Next \u203A")), barOpen && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 80,
+      background: "rgba(10,11,22,0.97)",
+      borderTop: "1px solid rgba(212,184,120,0.45)",
+      padding: "12px 16px calc(env(safe-area-inset-bottom,0px) + 12px)",
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      justifyContent: "center",
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      color: "#d8d2ea",
+      letterSpacing: 1
+    }
+  }, "Highlight"), HL_COLORS.map(c => /*#__PURE__*/React.createElement("div", {
+    key: c,
+    onClick: () => apply(c),
+    style: {
+      width: 34,
+      height: 34,
+      borderRadius: 9,
+      background: c,
+      cursor: "pointer",
+      border: "2px solid rgba(255,255,255,0.3)"
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    onClick: dismiss,
+    style: {
+      width: 34,
+      height: 34,
+      borderRadius: 9,
+      background: "rgba(255,255,255,0.08)",
+      border: "1px solid rgba(255,255,255,0.2)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      color: "#cfc9e0"
+    }
+  }, "\u2715")));
 }
 function FocusWordBibleWall() {
   const [focusedCol, setFocusedCol] = useState(0);
