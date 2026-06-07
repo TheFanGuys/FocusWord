@@ -1,0 +1,3938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>FocusWord — Bible Wall</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#05040a; overflow:hidden; }
+  #root { width:100%; height:100vh; }
+  #msg { color:#cbb88a; font-family:-apple-system,Segoe UI,sans-serif; text-align:center;
+         padding:40px 24px; font-size:15px; line-height:1.5; }
+  * { -webkit-tap-highlight-color: transparent; }
+  #backBtn {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 14px; z-index: 9999;
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(10,8,18,0.55); border: 1px solid rgba(212,184,120,0.55);
+    color: #f0dca2; font-size: 26px; line-height: 1; text-decoration: none;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  #backBtn:active { background: rgba(30,24,46,0.8); }
+</style>
+</head>
+<body>
+<div id="root"><div id="msg">Loading the Wall\u2026</div></div>
+<a id="backBtn" href="index.html" aria-label="Back to app">&#8249;</a>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+  function showErr(t){ var r=document.getElementById("root"); if(r) r.innerHTML='<div id="msg">'+t+'</div>'; }
+  window.addEventListener("error", function(e){ showErr("Something went wrong loading the Wall:<br><br>"+(e.message||e)); });
+  if(!window.React || !window.ReactDOM){ showErr("Couldn\u2019t load React from the internet. Check your connection and refresh."); }
+  (function(){ var b=document.getElementById("backBtn");
+    if(b) b.addEventListener("click", function(ev){ if(history.length>1){ ev.preventDefault(); history.back(); } }); })();
+</script>
+<script>
+const {
+  useState,
+  useRef,
+  useEffect,
+  useCallback
+} = React;
+
+/*
+  FocusWord Bible Wall — v2 (Architectural Wall)
+  ----------------------------------------------
+  This is ONE continuous wall, not separate cards. The whole surface is angled
+  in 3D and recedes to a vanishing point on the right. Books are mounted on it
+  in two rows: Old Testament on top, New Testament on the bottom.
+
+  Source of truth = the BIBLE_BOOKS list below (all 66 books). In a real project
+  this data would live in bibleBooks.json. Plaques are generated dynamically by
+  mapping over the array, never hardcoded one by one.
+
+  Controls: scroll wheel / swipe up-down / arrow keys to glide along the wall.
+  The whole wall slides; the focused column lights up and grows slightly but
+  stays mounted on the wall. Tap any plaque to glide to it.
+
+  Performance: only the wall's horizontal slide is animated each frame, written
+  straight to the DOM through a ref via requestAnimationFrame. React re-renders
+  only when the focused column changes.
+*/
+
+const BIBLE_BOOKS = [{
+  number: 1,
+  name: "Genesis",
+  chapters: 50,
+  memoryWord: "Beginnings",
+  testament: "OT",
+  category: "Law",
+  summary: "God creates the world and calls a family to bless all nations."
+}, {
+  number: 2,
+  name: "Exodus",
+  chapters: 40,
+  memoryWord: "Deliverance",
+  testament: "OT",
+  category: "Law",
+  summary: "God rescues Israel from Egypt and dwells among His people."
+}, {
+  number: 3,
+  name: "Leviticus",
+  chapters: 27,
+  memoryWord: "Holiness",
+  testament: "OT",
+  category: "Law",
+  summary: "Laws and offerings that teach Israel how to approach a holy God."
+}, {
+  number: 4,
+  name: "Numbers",
+  chapters: 36,
+  memoryWord: "Wandering",
+  testament: "OT",
+  category: "Law",
+  summary: "Israel journeys through the wilderness toward the promised land."
+}, {
+  number: 5,
+  name: "Deuteronomy",
+  chapters: 34,
+  memoryWord: "Obedience",
+  testament: "OT",
+  category: "Law",
+  summary: "Moses calls the new generation to remember and obey the covenant."
+}, {
+  number: 6,
+  name: "Joshua",
+  chapters: 24,
+  memoryWord: "Conquest",
+  testament: "OT",
+  category: "History",
+  summary: "Israel enters and takes possession of the promised land."
+}, {
+  number: 7,
+  name: "Judges",
+  chapters: 21,
+  memoryWord: "Cycles",
+  testament: "OT",
+  category: "History",
+  summary: "Israel repeats a cycle of sin, oppression, rescue, and rest."
+}, {
+  number: 8,
+  name: "Ruth",
+  chapters: 4,
+  memoryWord: "Redemption",
+  testament: "OT",
+  category: "History",
+  summary: "Loyalty and a kinsman-redeemer in the line leading to David."
+}, {
+  number: 9,
+  name: "1 Samuel",
+  chapters: 31,
+  memoryWord: "Kingship",
+  testament: "OT",
+  category: "History",
+  summary: "Israel asks for a king; Saul rises and David is anointed."
+}, {
+  number: 10,
+  name: "2 Samuel",
+  chapters: 24,
+  memoryWord: "David",
+  testament: "OT",
+  category: "History",
+  summary: "David's reign, his triumphs, his failures, and God's promise."
+}, {
+  number: 11,
+  name: "1 Kings",
+  chapters: 22,
+  memoryWord: "Division",
+  testament: "OT",
+  category: "History",
+  summary: "Solomon's temple, then the kingdom splits in two."
+}, {
+  number: 12,
+  name: "2 Kings",
+  chapters: 25,
+  memoryWord: "Exile",
+  testament: "OT",
+  category: "History",
+  summary: "Both kingdoms decline and fall into captivity."
+}, {
+  number: 13,
+  name: "1 Chronicles",
+  chapters: 29,
+  memoryWord: "Worship",
+  testament: "OT",
+  category: "History",
+  summary: "Israel's history retold with a focus on David and worship."
+}, {
+  number: 14,
+  name: "2 Chronicles",
+  chapters: 36,
+  memoryWord: "Temple",
+  testament: "OT",
+  category: "History",
+  summary: "The temple, the kings of Judah, and the call to seek God."
+}, {
+  number: 15,
+  name: "Ezra",
+  chapters: 10,
+  memoryWord: "Restoration",
+  testament: "OT",
+  category: "History",
+  summary: "Exiles return and rebuild the temple and their worship."
+}, {
+  number: 16,
+  name: "Nehemiah",
+  chapters: 13,
+  memoryWord: "Rebuilding",
+  testament: "OT",
+  category: "History",
+  summary: "The walls of Jerusalem and the people's faith are rebuilt."
+}, {
+  number: 17,
+  name: "Esther",
+  chapters: 10,
+  memoryWord: "Providence",
+  testament: "OT",
+  category: "History",
+  summary: "God quietly protects His people through a courageous queen."
+}, {
+  number: 18,
+  name: "Job",
+  chapters: 42,
+  memoryWord: "Suffering",
+  testament: "OT",
+  category: "Wisdom",
+  summary: "A righteous man wrestles with suffering and meets God."
+}, {
+  number: 19,
+  name: "Psalms",
+  chapters: 150,
+  memoryWord: "Praise",
+  testament: "OT",
+  category: "Wisdom",
+  summary: "Songs and prayers for every season of the human heart."
+}, {
+  number: 20,
+  name: "Proverbs",
+  chapters: 31,
+  memoryWord: "Wisdom",
+  testament: "OT",
+  category: "Wisdom",
+  summary: "Practical wisdom for living well in the fear of the Lord."
+}, {
+  number: 21,
+  name: "Ecclesiastes",
+  chapters: 12,
+  memoryWord: "Meaning",
+  testament: "OT",
+  category: "Wisdom",
+  summary: "A search for meaning that ends in fearing God."
+}, {
+  number: 22,
+  name: "Song of Solomon",
+  chapters: 8,
+  memoryWord: "Love",
+  testament: "OT",
+  category: "Wisdom",
+  summary: "A poem celebrating love and devotion between two people."
+}, {
+  number: 23,
+  name: "Isaiah",
+  chapters: 66,
+  memoryWord: "Salvation",
+  testament: "OT",
+  category: "Major Prophets",
+  summary: "Judgment and a promised Servant who brings salvation."
+}, {
+  number: 24,
+  name: "Jeremiah",
+  chapters: 52,
+  memoryWord: "Judgment",
+  testament: "OT",
+  category: "Major Prophets",
+  summary: "A weeping prophet warns of judgment and a new covenant."
+}, {
+  number: 25,
+  name: "Lamentations",
+  chapters: 5,
+  memoryWord: "Grief",
+  testament: "OT",
+  category: "Major Prophets",
+  summary: "Mourning over Jerusalem, anchored by God's faithfulness."
+}, {
+  number: 26,
+  name: "Ezekiel",
+  chapters: 48,
+  memoryWord: "Glory",
+  testament: "OT",
+  category: "Major Prophets",
+  summary: "Visions of God's glory, judgment, and a coming restoration."
+}, {
+  number: 27,
+  name: "Daniel",
+  chapters: 12,
+  memoryWord: "Sovereignty",
+  testament: "OT",
+  category: "Major Prophets",
+  summary: "Faithfulness in exile under a God who rules all kingdoms."
+}, {
+  number: 28,
+  name: "Hosea",
+  chapters: 14,
+  memoryWord: "Faithfulness",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "God's relentless love for an unfaithful people."
+}, {
+  number: 29,
+  name: "Joel",
+  chapters: 3,
+  memoryWord: "Restoration",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "A call to repent and a promise of God's Spirit poured out."
+}, {
+  number: 30,
+  name: "Amos",
+  chapters: 9,
+  memoryWord: "Justice",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "God demands justice, not empty religion."
+}, {
+  number: 31,
+  name: "Obadiah",
+  chapters: 1,
+  memoryWord: "Pride",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "A warning against pride and the certainty of God's justice."
+}, {
+  number: 32,
+  name: "Jonah",
+  chapters: 4,
+  memoryWord: "Mercy",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "A reluctant prophet learns the breadth of God's mercy."
+}, {
+  number: 33,
+  name: "Micah",
+  chapters: 7,
+  memoryWord: "Justice",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "Do justice, love mercy, walk humbly with God."
+}, {
+  number: 34,
+  name: "Nahum",
+  chapters: 3,
+  memoryWord: "Reckoning",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "God's judgment falls on a violent, oppressive empire."
+}, {
+  number: 35,
+  name: "Habakkuk",
+  chapters: 3,
+  memoryWord: "Faith",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "Honest questions answered by trusting God's timing."
+}, {
+  number: 36,
+  name: "Zephaniah",
+  chapters: 3,
+  memoryWord: "The Day",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "The day of the Lord brings judgment and joyful renewal."
+}, {
+  number: 37,
+  name: "Haggai",
+  chapters: 2,
+  memoryWord: "Priorities",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "A call to rebuild the temple and put God first."
+}, {
+  number: 38,
+  name: "Zechariah",
+  chapters: 14,
+  memoryWord: "Hope",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "Visions of restoration pointing to a coming King."
+}, {
+  number: 39,
+  name: "Malachi",
+  chapters: 4,
+  memoryWord: "Return",
+  testament: "OT",
+  category: "Minor Prophets",
+  summary: "A final call to return to God before the Messenger comes."
+}, {
+  number: 40,
+  name: "Matthew",
+  chapters: 28,
+  memoryWord: "Kingdom",
+  testament: "NT",
+  category: "Gospels",
+  summary: "Jesus the promised King and the kingdom of heaven."
+}, {
+  number: 41,
+  name: "Mark",
+  chapters: 16,
+  memoryWord: "Servant",
+  testament: "NT",
+  category: "Gospels",
+  summary: "Jesus the suffering Servant who acts with power."
+}, {
+  number: 42,
+  name: "Luke",
+  chapters: 24,
+  memoryWord: "Salvation",
+  testament: "NT",
+  category: "Gospels",
+  summary: "Jesus the Savior for the lost, the poor, and the outsider."
+}, {
+  number: 43,
+  name: "John",
+  chapters: 21,
+  memoryWord: "Light",
+  testament: "NT",
+  category: "Gospels",
+  summary: "Jesus the Son of God; believe and have life in His name."
+}, {
+  number: 44,
+  name: "Acts",
+  chapters: 28,
+  memoryWord: "Witness",
+  testament: "NT",
+  category: "History",
+  summary: "The Spirit empowers the church to take the gospel everywhere."
+}, {
+  number: 45,
+  name: "Romans",
+  chapters: 16,
+  memoryWord: "Grace",
+  testament: "NT",
+  category: "Epistles",
+  summary: "The gospel of righteousness by faith for all people."
+}, {
+  number: 46,
+  name: "1 Corinthians",
+  chapters: 16,
+  memoryWord: "Unity",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Correcting a divided church to live in love and order."
+}, {
+  number: 47,
+  name: "2 Corinthians",
+  chapters: 13,
+  memoryWord: "Comfort",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Strength in weakness and the ministry of reconciliation."
+}, {
+  number: 48,
+  name: "Galatians",
+  chapters: 6,
+  memoryWord: "Freedom",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Freedom in Christ, not slavery to the law."
+}, {
+  number: 49,
+  name: "Ephesians",
+  chapters: 6,
+  memoryWord: "Church",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Who we are in Christ and how His church lives it out."
+}, {
+  number: 50,
+  name: "Philippians",
+  chapters: 4,
+  memoryWord: "Joy",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Joy and contentment in Christ in every circumstance."
+}, {
+  number: 51,
+  name: "Colossians",
+  chapters: 4,
+  memoryWord: "Supremacy",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Christ is supreme over all things and enough for us."
+}, {
+  number: 52,
+  name: "1 Thessalonians",
+  chapters: 5,
+  memoryWord: "Hope",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Encouragement to live faithfully awaiting Christ's return."
+}, {
+  number: 53,
+  name: "2 Thessalonians",
+  chapters: 3,
+  memoryWord: "Steadfast",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Stand firm and keep working until the Lord returns."
+}, {
+  number: 54,
+  name: "1 Timothy",
+  chapters: 6,
+  memoryWord: "Leadership",
+  testament: "NT",
+  category: "Epistles",
+  summary: "How to lead and order the household of God."
+}, {
+  number: 55,
+  name: "2 Timothy",
+  chapters: 4,
+  memoryWord: "Endurance",
+  testament: "NT",
+  category: "Epistles",
+  summary: "A charge to guard the gospel and finish the race."
+}, {
+  number: 56,
+  name: "Titus",
+  chapters: 3,
+  memoryWord: "Integrity",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Sound teaching that produces godly living."
+}, {
+  number: 57,
+  name: "Philemon",
+  chapters: 1,
+  memoryWord: "Forgiveness",
+  testament: "NT",
+  category: "Epistles",
+  summary: "A personal plea for grace and reconciliation."
+}, {
+  number: 58,
+  name: "Hebrews",
+  chapters: 13,
+  memoryWord: "Better",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Christ is better; hold fast your confidence in Him."
+}, {
+  number: 59,
+  name: "James",
+  chapters: 5,
+  memoryWord: "Works",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Real faith shows itself in how we live."
+}, {
+  number: 60,
+  name: "1 Peter",
+  chapters: 5,
+  memoryWord: "Suffering",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Hope and holiness for believers facing hardship."
+}, {
+  number: 61,
+  name: "2 Peter",
+  chapters: 3,
+  memoryWord: "Truth",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Grow in grace and beware of false teaching."
+}, {
+  number: 62,
+  name: "1 John",
+  chapters: 5,
+  memoryWord: "Love",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Assurance of life through love, truth, and obedience."
+}, {
+  number: 63,
+  name: "2 John",
+  chapters: 1,
+  memoryWord: "Walk",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Walk in truth and love; guard against deceivers."
+}, {
+  number: 64,
+  name: "3 John",
+  chapters: 1,
+  memoryWord: "Hospitality",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Support those who serve the truth faithfully."
+}, {
+  number: 65,
+  name: "Jude",
+  chapters: 1,
+  memoryWord: "Contend",
+  testament: "NT",
+  category: "Epistles",
+  summary: "Contend for the faith against those who distort it."
+}, {
+  number: 66,
+  name: "Revelation",
+  chapters: 22,
+  memoryWord: "Victory",
+  testament: "NT",
+  category: "Prophecy",
+  summary: "Jesus wins; God makes all things new forever."
+}];
+
+// ---- tuning knobs (safe to tweak) --------------------------------------
+const COL_W = 172; // width of one column slot (px)
+const ROW_H = 196; // height of one plaque (px)
+const ROW_GAP = 30; // vertical gap between OT row and NT row (px)
+const WALL_ANGLE = 40; // degrees the whole wall is rotated away (bigger = more dramatic)
+const PERSPECTIVE = 900; // smaller = stronger perspective
+const FOCUS_INSET = 1.4; // how many columns of "already passed" books stay visible at front
+const DRAG_SENS = 0.018; // how directly the wall follows your finger while dragging
+const WHEEL_IMPULSE = 0.00075; // how much a mouse-wheel notch adds to the glide
+const FRICTION = 0.948; // glide decay per frame (closer to 1 = longer glide)
+const MAX_VEL = 0.85; // top speed cap (books per frame)
+const SNAP = 0.18; // how firmly it settles onto the nearest book
+const STOP_VEL = 0.022; // below this speed, it eases to a rest and snaps
+// ------------------------------------------------------------------------
+
+const OT = BIBLE_BOOKS.filter(b => b.testament === "OT");
+const NT = BIBLE_BOOKS.filter(b => b.testament === "NT");
+const COLS = Math.max(OT.length, NT.length); // 39
+const WALL_W = COLS * COL_W;
+const WALL_H = ROW_H * 2 + ROW_GAP;
+const accent = t => t === "OT" ? "#b07dff" : "#48b4ff";
+
+// Atmospheric hue per book category — drives the room's mood as you travel
+const categoryColor = cat => ({
+  "Law": "#d9a441",
+  "History": "#3fb6a8",
+  "Wisdom": "#5fc06b",
+  "Major Prophets": "#9b6cff",
+  "Minor Prophets": "#7a78ff",
+  "Gospels": "#f2c14e",
+  "Epistles": "#4a9bff",
+  "Prophecy": "#e0556b"
+})[cat] || "#8a7dff";
+
+// A unique engraved symbol for every book of the Bible
+// ---- Artwork system -----------------------------------------------------
+// Final images live in the /images folder, named  NN-slug.webp
+//   01-genesis.webp · 02-exodus.webp · 09-1-samuel.webp ·
+//   22-song-of-solomon.webp · 66-revelation.webp
+// Drop the files in and each card picks them up automatically — no code edits.
+const ART_BASE = "images/wall/"; // path relative to index.html (GitHub Pages)
+const ART_EXT = "jpg"; // images saved from Midjourney as JPG
+// While a card's image is missing, fall back to the approved illustrated scene.
+// Set this to false to fall back to a plain category-tinted panel instead.
+const USE_SCENE_FALLBACK = true;
+// Midjourney art is scene-only (cinematic poster, no text). The wall draws the gold
+// nameplate with the book name on every card — identical shape and perfect spelling.
+const IMAGE_HAS_OWN_TITLE = false;
+const slug = name => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+const artworkSrc = book => `${ART_BASE}${slug(book.name)}.${ART_EXT}`;
+// -------------------------------------------------------------------------
+
+const STARS = /*#__PURE__*/React.createElement("g", {
+  fill: "#fdf3c8"
+}, /*#__PURE__*/React.createElement("circle", {
+  cx: "10",
+  cy: "14",
+  r: "1"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "22",
+  cy: "8",
+  r: "0.7"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "34",
+  cy: "18",
+  r: "1.1"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "48",
+  cy: "9",
+  r: "0.8"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "62",
+  cy: "15",
+  r: "1"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "74",
+  cy: "8",
+  r: "0.7"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "86",
+  cy: "19",
+  r: "1.1"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "92",
+  cy: "33",
+  r: "0.8"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "16",
+  cy: "31",
+  r: "0.7"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "68",
+  cy: "27",
+  r: "0.9"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "40",
+  cy: "29",
+  r: "0.7"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "56",
+  cy: "24",
+  r: "0.8"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "30",
+  cy: "40",
+  r: "0.6"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "80",
+  cy: "42",
+  r: "0.7"
+}));
+
+// Each book rendered as a small illustrated scene (sky + landscape + gilded subject)
+function BookScene({
+  number,
+  focused
+}) {
+  const gold = `url(#${focused ? "fwGoldBright" : "fwGold"})`;
+  const dk = "#0b0a12",
+    mid = "#191428",
+    ink = "#06050d";
+  let sky = "skyDeep",
+    s = null;
+  switch (number) {
+    case 1:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "54",
+        rx: "36",
+        ry: "34",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 82 Q50 72 100 82 V116 H0 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "46",
+        y: "50",
+        width: "8",
+        height: "40",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "42",
+        r: "22",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 64 L40 54 M50 60 L60 50",
+        stroke: ink,
+        strokeWidth: "2"
+      }));
+      break;
+    case 2:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+        d: "M0 26 C30 52 30 92 8 116 L0 116 Z",
+        fill: "url(#water)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M100 26 C70 52 70 92 92 116 L100 116 Z",
+        fill: "url(#water)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "40",
+        y: "34",
+        width: "20",
+        height: "82",
+        fill: "url(#glowWarm)",
+        opacity: "0.8"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M6 40 q12 6 16 18 M94 40 q-12 6 -16 18",
+        stroke: "#bfe6ee",
+        strokeWidth: "1.4",
+        fill: "none",
+        opacity: "0.7"
+      }));
+      break;
+    case 3:
+      sky = "skyDesert";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "84",
+        width: "100",
+        height: "32",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "30",
+        rx: "15",
+        ry: "9",
+        fill: "#cfcad8",
+        opacity: "0.45"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "46",
+        r: "16",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 60 L50 46 L70 60 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "34",
+        y: "60",
+        width: "32",
+        height: "24",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "46",
+        y: "68",
+        width: "8",
+        height: "16",
+        fill: ink
+      }));
+      break;
+    case 4:
+      sky = "skyDesert";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "74",
+        cy: "28",
+        r: "11",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "74",
+        cy: "28",
+        r: "6",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 96 Q30 80 60 90 T100 86 V116 H0 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 104 Q40 92 100 100 V116 H0 Z",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("g", {
+        fill: ink
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M40 92 l2 -7 2 7 z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M48 93 l2 -7 2 7 z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M56 94 l2 -7 2 7 z"
+      })));
+      break;
+    case 5:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "40",
+        r: "18",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 116 L40 56 L60 56 L100 116 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M44 40 a4 4 0 0 1 5 0 V58 H44 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M51 40 a4 4 0 0 1 5 0 V58 H51 Z",
+        fill: gold
+      }));
+      break;
+    case 6:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "22",
+        cy: "30",
+        r: "13",
+        fill: "url(#glowGold)",
+        opacity: "0.8"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M22 30 L60 50 M22 30 L62 40 M22 30 L58 62",
+        stroke: gold,
+        strokeWidth: "1.6",
+        opacity: "0.7"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M18 86 Q50 60 82 86 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 80 L34 70 L40 78 L46 68 L52 78 L58 70 L62 80",
+        stroke: dk,
+        strokeWidth: "3",
+        fill: "none"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "86",
+        width: "100",
+        height: "30",
+        fill: dk
+      }));
+      break;
+    case 7:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "76",
+        cy: "26",
+        r: "8",
+        fill: "#cdd6e0",
+        opacity: "0.5"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 84 Q50 74 100 84 V116 H0 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 30 L53 36 L51 78 L49 78 L47 36 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "40",
+        y: "44",
+        width: "20",
+        height: "3",
+        fill: gold
+      }));
+      break;
+    case 8:
+      sky = "skyGold";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "40",
+        r: "16",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "86",
+        width: "100",
+        height: "30",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "2.4"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "20",
+        y1: "100",
+        x2: "20",
+        y2: "78"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "30",
+        y1: "102",
+        x2: "30",
+        y2: "76"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "40",
+        y1: "100",
+        x2: "40",
+        y2: "78"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "62",
+        y1: "102",
+        x2: "62",
+        y2: "76"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "72",
+        y1: "100",
+        x2: "72",
+        y2: "78"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "82",
+        y1: "100",
+        x2: "82",
+        y2: "80"
+      })));
+      break;
+    case 9:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("path", {
+        d: "M14 24 C26 20 40 24 44 34 C36 40 22 38 16 32 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "42",
+        y: "34",
+        width: "3",
+        height: "36",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M44 92 a14 14 0 0 1 28 0 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "58",
+        cy: "66",
+        r: "7",
+        fill: ink
+      }));
+      break;
+    case 10:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M10 92 V84 h6 v8 M22 92 V80 h6 v12 M78 92 V82 h6 v10 M88 92 V86 h6 v6",
+        stroke: mid,
+        strokeWidth: "4"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "50",
+        r: "18",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M34 60 L34 44 L42 51 L50 38 L58 51 L66 44 L66 60 Z",
+        fill: gold
+      }));
+      break;
+    case 11:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M26 44 L50 30 L74 44 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("g", {
+        fill: gold
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: "30",
+        y: "44",
+        width: "5",
+        height: "42"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "47",
+        y: "44",
+        width: "6",
+        height: "42"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "65",
+        y: "44",
+        width: "5",
+        height: "42"
+      })), /*#__PURE__*/React.createElement("rect", {
+        x: "24",
+        y: "86",
+        width: "52",
+        height: "6",
+        fill: gold
+      }));
+      break;
+    case 12:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "90",
+        width: "100",
+        height: "26",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M22 90 V50 L30 44 L38 50 V70 L34 66 V90 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M62 90 V70 L66 64 V46 L74 52 V90 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M48 38 L46 56 L52 50 L50 70",
+        stroke: gold,
+        strokeWidth: "2",
+        fill: "none",
+        opacity: "0.7"
+      }));
+      break;
+    case 13:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("rect", {
+        x: "16",
+        y: "34",
+        width: "68",
+        height: "14",
+        rx: "6",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "16",
+        y: "76",
+        width: "68",
+        height: "14",
+        rx: "6",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "22",
+        y: "48",
+        width: "56",
+        height: "28",
+        fill: "#efe6c8"
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: "#7a6a44",
+        strokeWidth: "2"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "30",
+        y1: "56",
+        x2: "70",
+        y2: "56"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "30",
+        y1: "62",
+        x2: "62",
+        y2: "62"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "30",
+        y1: "68",
+        x2: "66",
+        y2: "68"
+      })));
+      break;
+    case 14:
+      sky = "skyGold";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "90",
+        width: "100",
+        height: "26",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M28 64 a22 12 0 0 1 44 0 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "48",
+        y: "40",
+        width: "4",
+        height: "14",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "26",
+        y: "64",
+        width: "48",
+        height: "26",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "44",
+        y: "74",
+        width: "12",
+        height: "16",
+        fill: ink
+      }));
+      break;
+    case 15:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "68",
+        cy: "36",
+        r: "14",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "3"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "24",
+        y1: "92",
+        x2: "24",
+        y2: "50"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "44",
+        y1: "92",
+        x2: "44",
+        y2: "46"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "24",
+        y1: "58",
+        x2: "44",
+        y2: "54"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "24",
+        y1: "70",
+        x2: "44",
+        y2: "66"
+      })), /*#__PURE__*/React.createElement("rect", {
+        x: "56",
+        y: "62",
+        width: "22",
+        height: "26",
+        fill: gold
+      }));
+      break;
+    case 16:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "88",
+        width: "100",
+        height: "28",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("g", {
+        fill: mid
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: "16",
+        y: "64",
+        width: "14",
+        height: "10"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "32",
+        y: "64",
+        width: "14",
+        height: "10"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "24",
+        y: "74",
+        width: "14",
+        height: "10"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "40",
+        y: "74",
+        width: "14",
+        height: "10"
+      })), /*#__PURE__*/React.createElement("circle", {
+        cx: "74",
+        cy: "64",
+        r: "9",
+        fill: "url(#fire)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "72",
+        y: "64",
+        width: "4",
+        height: "24",
+        fill: gold
+      }));
+      break;
+    case 17:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("g", {
+        fill: mid
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: "14",
+        y: "48",
+        width: "6",
+        height: "44"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "30",
+        y: "48",
+        width: "6",
+        height: "44"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "64",
+        y: "48",
+        width: "6",
+        height: "44"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "80",
+        y: "48",
+        width: "6",
+        height: "44"
+      })), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "50",
+        r: "16",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "42",
+        y1: "70",
+        x2: "56",
+        y2: "40",
+        stroke: gold,
+        strokeWidth: "3"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "57",
+        cy: "37",
+        r: "4",
+        fill: gold
+      }));
+      break;
+    case 18:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("circle", {
+        cx: "72",
+        cy: "22",
+        r: "3",
+        fill: "#fff7d8"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "72",
+        cy: "22",
+        r: "8",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 98 Q50 90 100 98 V116 H0 Z",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "46",
+        cy: "92",
+        r: "4",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M42 96 h8 v8 h-8 z",
+        fill: mid
+      }));
+      break;
+    case 19:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "52",
+        r: "22",
+        fill: "url(#glowGold)",
+        opacity: "0.7"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M34 86 C28 62 38 38 56 38",
+        stroke: gold,
+        strokeWidth: "5",
+        fill: "none"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "56",
+        y1: "38",
+        x2: "56",
+        y2: "86",
+        stroke: gold,
+        strokeWidth: "5"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "30",
+        y1: "86",
+        x2: "62",
+        y2: "86",
+        stroke: gold,
+        strokeWidth: "5"
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "2"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "40",
+        y1: "48",
+        x2: "40",
+        y2: "84"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "46",
+        y1: "44",
+        x2: "46",
+        y2: "86"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "51",
+        y1: "42",
+        x2: "51",
+        y2: "86"
+      })));
+      break;
+    case 20:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "90",
+        width: "100",
+        height: "26",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "48",
+        r: "18",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "47",
+        y: "62",
+        width: "6",
+        height: "28",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M40 62 q10 -12 20 0 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "52",
+        r: "5",
+        fill: "#fff3c0"
+      }));
+      break;
+    case 21:
+      sky = "skyGold";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "70",
+        r: "14",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M40 40 H60 L50 56 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M40 88 H60 L50 72 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "38",
+        y: "38",
+        width: "24",
+        height: "3",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "38",
+        y: "86",
+        width: "24",
+        height: "3",
+        fill: gold
+      }));
+      break;
+    case 22:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "52",
+        r: "20",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 70 C40 60 42 44 50 50 C58 44 60 60 50 70 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "70",
+        x2: "50",
+        y2: "90",
+        stroke: gold,
+        strokeWidth: "3"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 80 q-7 -2 -9 -8 M50 84 q7 -2 9 -8",
+        stroke: gold,
+        strokeWidth: "2",
+        fill: "none"
+      }));
+      break;
+    case 23:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "50",
+        rx: "30",
+        ry: "28",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "44",
+        y: "74",
+        width: "12",
+        height: "16",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "48",
+        y: "40",
+        width: "4",
+        height: "38",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 56 C40 56 36 48 38 42 C46 44 50 50 50 56 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 50 C60 50 64 42 62 36 C54 38 50 44 50 50 Z",
+        fill: gold
+      }));
+      break;
+    case 24:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "90",
+        width: "100",
+        height: "26",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "90",
+        rx: "26",
+        ry: "5",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M40 54 C40 48 60 48 60 54 L58 84 C58 88 42 88 42 84 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "44",
+        y: "48",
+        width: "12",
+        height: "6",
+        fill: gold
+      }));
+      break;
+    case 25:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "80",
+        width: "100",
+        height: "36",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("g", {
+        fill: mid
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: "14",
+        y: "58",
+        width: "10",
+        height: "22"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "28",
+        y: "50",
+        width: "8",
+        height: "30"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "60",
+        y: "56",
+        width: "10",
+        height: "24"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "74",
+        y: "62",
+        width: "8",
+        height: "18"
+      })), /*#__PURE__*/React.createElement("path", {
+        d: "M50 36 C46 46 49 52 52 52 C50 44 50 40 50 36 Z",
+        fill: gold
+      }));
+      break;
+    case 26:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "50",
+        r: "24",
+        fill: "url(#glowGold)",
+        opacity: "0.6"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "50",
+        r: "20",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "3"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "50",
+        r: "9",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "3"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 30 V70 M30 50 H70 M36 36 L64 64 M64 36 L36 64",
+        stroke: gold,
+        strokeWidth: "1.5"
+      }));
+      break;
+    case 27:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("path", {
+        d: "M22 92 V58 a28 28 0 0 1 56 0 V92 Z",
+        fill: ink
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "44",
+        y: "20",
+        width: "12",
+        height: "40",
+        fill: "url(#glowWarm)",
+        opacity: "0.8"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "78",
+        rx: "16",
+        ry: "10",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "66",
+        r: "10",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("g", {
+        fill: ink
+      }, /*#__PURE__*/React.createElement("circle", {
+        cx: "46",
+        cy: "64",
+        r: "1.4"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "54",
+        cy: "64",
+        r: "1.4"
+      })));
+      break;
+    case 28:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+        d: "M0 96 Q30 84 50 92 T100 88 V116 H0 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "104",
+        width: "100",
+        height: "12",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "48",
+        r: "16",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 66 C38 56 41 40 50 47 C59 40 62 56 50 66 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 47 l-3 6 5 4 -4 7",
+        stroke: ink,
+        strokeWidth: "1.6",
+        fill: "none"
+      }));
+      break;
+    case 29:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "76",
+        cy: "26",
+        r: "9",
+        fill: "url(#fire)",
+        opacity: "0.7"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("g", {
+        fill: ink
+      }, /*#__PURE__*/React.createElement("ellipse", {
+        cx: "20",
+        cy: "40",
+        rx: "3",
+        ry: "2"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "34",
+        cy: "34",
+        rx: "3",
+        ry: "2"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "46",
+        cy: "46",
+        rx: "3",
+        ry: "2"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "58",
+        cy: "38",
+        rx: "3",
+        ry: "2"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "30",
+        cy: "54",
+        rx: "3",
+        ry: "2"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "60",
+        rx: "3",
+        ry: "2"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "66",
+        cy: "52",
+        rx: "3",
+        ry: "2"
+      })));
+      break;
+    case 30:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "58",
+        y: "20",
+        width: "34",
+        height: "70",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "90",
+        width: "100",
+        height: "26",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "28",
+        y: "22",
+        width: "30",
+        height: "3",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "42",
+        y1: "25",
+        x2: "42",
+        y2: "70",
+        stroke: gold,
+        strokeWidth: "2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M42 70 l-4 8 8 0 z",
+        fill: gold
+      }));
+      break;
+    case 31:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+        d: "M0 116 L24 40 L40 70 L58 30 L78 80 L100 50 V116 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "52",
+        y: "22",
+        width: "12",
+        height: "14",
+        fill: ink
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 8 v10 M46 14 l4 4 4 -4",
+        stroke: gold,
+        strokeWidth: "2",
+        fill: "none"
+      }));
+      break;
+    case 32:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "0",
+        width: "100",
+        height: "64",
+        fill: "url(#skyNight)"
+      }), STARS, /*#__PURE__*/React.createElement("circle", {
+        cx: "78",
+        cy: "20",
+        r: "7",
+        fill: "#fff3c8"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "62",
+        width: "100",
+        height: "54",
+        fill: "url(#water)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M16 78 C30 58 64 58 80 78 C66 92 34 92 16 78 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M80 78 L94 68 L94 88 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "32",
+        cy: "72",
+        r: "1.8",
+        fill: ink
+      }));
+      break;
+    case 33:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "72",
+        cy: "40",
+        r: "13",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 116 L40 60 L48 60 L100 116 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 110 Q50 96 100 104 V116 H0 Z",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("g", {
+        fill: gold
+      }, /*#__PURE__*/React.createElement("ellipse", {
+        cx: "24",
+        cy: "100",
+        rx: "3",
+        ry: "5"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "36",
+        cy: "92",
+        rx: "3",
+        ry: "5"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "48",
+        cy: "84",
+        rx: "2.6",
+        ry: "4.4"
+      })));
+      break;
+    case 34:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "78",
+        cy: "24",
+        r: "12",
+        fill: "url(#fire)",
+        opacity: "0.7"
+      }), /*#__PURE__*/React.createElement("g", {
+        fill: mid
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: "20",
+        y: "54",
+        width: "10",
+        height: "30"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "34",
+        y: "48",
+        width: "8",
+        height: "36"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "60",
+        y: "56",
+        width: "10",
+        height: "28"
+      })), /*#__PURE__*/React.createElement("path", {
+        d: "M0 84 q12 -6 22 0 t22 0 t22 0 t22 0 V116 H0 Z",
+        fill: "url(#water)"
+      }));
+      break;
+    case 35:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "74",
+        cy: "34",
+        r: "14",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 116 L18 70 L40 70 L40 116 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "20",
+        y: "44",
+        width: "16",
+        height: "28",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M20 44 v-4 h3 v3 h3 v-3 h3 v3 h3 v-3 h3 v4 z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "28",
+        cy: "38",
+        r: "2.4",
+        fill: ink
+      }));
+      break;
+    case 36:
+      sky = "skyGold";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "42",
+        r: "22",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "42",
+        r: "11",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "2"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "8",
+        x2: "50",
+        y2: "18"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "22",
+        y1: "20",
+        x2: "28",
+        y2: "28"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "78",
+        y1: "20",
+        x2: "72",
+        y2: "28"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "14",
+        y1: "42",
+        x2: "24",
+        y2: "42"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "86",
+        y1: "42",
+        x2: "76",
+        y2: "42"
+      })), /*#__PURE__*/React.createElement("g", {
+        fill: mid
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: "20",
+        y: "86",
+        width: "12",
+        height: "14"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "44",
+        y: "82",
+        width: "12",
+        height: "18"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "68",
+        y: "86",
+        width: "12",
+        height: "14"
+      })), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "100",
+        width: "100",
+        height: "16",
+        fill: dk
+      }));
+      break;
+    case 37:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "42",
+        r: "22",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M28 50 L50 36 L72 50 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "4"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "32",
+        y1: "50",
+        x2: "32",
+        y2: "90"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "50",
+        x2: "50",
+        y2: "90"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "68",
+        y1: "50",
+        x2: "68",
+        y2: "90"
+      })));
+      break;
+    case 38:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("g", {
+        fill: mid
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M16 90 C12 76 16 66 18 60 C18 80 16 86 16 90 Z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M84 90 C88 76 84 66 82 60 C82 80 84 86 84 90 Z"
+      })), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "48",
+        r: "20",
+        fill: "url(#glowGold)",
+        opacity: "0.7"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "40",
+        x2: "50",
+        y2: "82",
+        stroke: gold,
+        strokeWidth: "4"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 70 C42 70 38 60 38 52 M50 70 C58 70 62 60 62 52 M50 66 C40 66 34 56 34 48 M50 66 C60 66 66 56 66 48",
+        stroke: gold,
+        strokeWidth: "3",
+        fill: "none"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "42",
+        y: "82",
+        width: "16",
+        height: "4",
+        fill: gold
+      }));
+      break;
+    case 39:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+        d: "M0 64 Q50 56 100 64 V116 H0 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "62",
+        r: "14",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "2"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "36",
+        x2: "50",
+        y2: "46"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "26",
+        y1: "44",
+        x2: "33",
+        y2: "51"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "74",
+        y1: "44",
+        x2: "67",
+        y2: "51"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "18",
+        y1: "62",
+        x2: "30",
+        y2: "62"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "82",
+        y1: "62",
+        x2: "70",
+        y2: "62"
+      })));
+      break;
+    case 40:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "48",
+        rx: "34",
+        ry: "30",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 92 Q50 82 100 92 V116 H0 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M28 64 L28 40 L40 51 L50 30 L60 51 L72 40 L72 64 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "28",
+        y: "64",
+        width: "44",
+        height: "6",
+        fill: gold
+      }));
+      break;
+    case 41:
+      sky = "skyGold";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "86",
+        width: "100",
+        height: "30",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M18 86 L40 80 L62 84 L82 78 V86 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M24 80 C24 64 40 60 50 64 C58 54 76 58 74 72 C82 76 78 86 68 84 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 64 C44 48 56 40 68 40 C64 52 64 60 56 66 Z",
+        fill: gold
+      }));
+      break;
+    case 42:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("path", {
+        d: "M50 14 l3 12 12 3 -12 3 -3 12 -3 -12 -12 -3 12 -3 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "29",
+        r: "13",
+        fill: "url(#glowGold)",
+        opacity: "0.7"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "90",
+        width: "100",
+        height: "26",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 90 L50 72 L70 90 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "42",
+        y: "80",
+        width: "16",
+        height: "10",
+        fill: ink
+      }));
+      break;
+    case 43:
+      sky = "skyDeep";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "72",
+        width: "100",
+        height: "44",
+        fill: "url(#water)"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "46",
+        r: "28",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "46",
+        r: "10",
+        fill: "#fff7d8"
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "2",
+        opacity: "0.8"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "6",
+        x2: "50",
+        y2: "20"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "72",
+        x2: "50",
+        y2: "86"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "14",
+        y1: "46",
+        x2: "28",
+        y2: "46"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "86",
+        y1: "46",
+        x2: "72",
+        y2: "46"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "24",
+        y1: "20",
+        x2: "33",
+        y2: "29"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "76",
+        y1: "20",
+        x2: "67",
+        y2: "29"
+      })));
+      break;
+    case 44:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("g", {
+        fill: ink
+      }, /*#__PURE__*/React.createElement("path", {
+        d: "M20 92 a5 7 0 0 1 10 0 z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M44 92 a5 7 0 0 1 10 0 z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M68 92 a5 7 0 0 1 10 0 z"
+      })), /*#__PURE__*/React.createElement("path", {
+        d: "M50 80 C40 70 44 52 50 42 C49 54 58 54 57 46 C66 54 64 70 50 80 Z",
+        fill: "url(#fire)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M28 84 C24 78 26 70 29 66 C28 72 33 72 32 68 C37 72 36 80 28 84 Z",
+        fill: "url(#fire)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M72 84 C68 78 70 70 73 66 C72 72 77 72 76 68 C81 72 80 80 72 84 Z",
+        fill: "url(#fire)"
+      }));
+      break;
+    case 45:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 92 V52 a20 20 0 0 1 40 0 V92",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "5"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "40",
+        y: "60",
+        width: "20",
+        height: "40",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M44 116 L56 116 L60 100 L40 100 Z",
+        fill: mid
+      }));
+      break;
+    case 46:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "86",
+        width: "100",
+        height: "30",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "56",
+        rx: "24",
+        ry: "12",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M40 50 L60 50 L56 68 a6 6 0 0 1 -12 0 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "46",
+        y: "68",
+        width: "8",
+        height: "10",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "40",
+        y: "78",
+        width: "20",
+        height: "4",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "72",
+        cy: "74",
+        rx: "9",
+        ry: "5",
+        fill: gold
+      }));
+      break;
+    case 47:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "54",
+        r: "16",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M40 44 H60 L57 84 H43 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "42",
+        y: "38",
+        width: "16",
+        height: "6",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M48 50 L44 64 L52 60 L48 78",
+        stroke: "#fff3c0",
+        strokeWidth: "2.4",
+        fill: "none"
+      }));
+      break;
+    case 48:
+      sky = "skyDeep";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "50",
+        r: "26",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 38 a6 7 0 1 1 0 14",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "5"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M70 48 a6 7 0 1 1 0 14",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "5"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M40 46 a5 5 0 0 1 6 0",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "5"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M60 56 a5 5 0 0 1 -6 0",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "5"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "48",
+        y1: "60",
+        x2: "45",
+        y2: "68",
+        stroke: gold,
+        strokeWidth: "2"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "54",
+        y1: "60",
+        x2: "57",
+        y2: "68",
+        stroke: gold,
+        strokeWidth: "2"
+      }));
+      break;
+    case 49:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "50",
+        rx: "28",
+        ry: "30",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "94",
+        width: "100",
+        height: "22",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 30 L66 36 V52 C66 66 58 76 50 80 C42 76 34 66 34 52 V36 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "40",
+        x2: "50",
+        y2: "72",
+        stroke: ink,
+        strokeWidth: "2.4"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "40",
+        y1: "52",
+        x2: "60",
+        y2: "52",
+        stroke: ink,
+        strokeWidth: "2.4"
+      }));
+      break;
+    case 50:
+      sky = "skyGold";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "40",
+        r: "20",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 92 Q30 72 50 84 T100 80 V116 H0 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "40",
+        r: "9",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M18 30 q5 -5 10 0 M72 34 q5 -5 10 0",
+        stroke: gold,
+        strokeWidth: "2",
+        fill: "none"
+      }));
+      break;
+    case 51:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("path", {
+        d: "M0 96 a60 60 0 0 1 100 0 V116 H0 Z",
+        fill: "url(#water)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 100 a60 56 0 0 1 100 0",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "1.5",
+        opacity: "0.6"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "44",
+        r: "16",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M36 50 L36 32 L43 38 L50 26 L57 38 L64 32 L64 50 Z",
+        fill: gold
+      }));
+      break;
+    case 52:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("g", {
+        fill: "#cfcad8",
+        opacity: "0.5"
+      }, /*#__PURE__*/React.createElement("ellipse", {
+        cx: "32",
+        cy: "34",
+        rx: "16",
+        ry: "8"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "66",
+        cy: "40",
+        rx: "18",
+        ry: "9"
+      })), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "2",
+        opacity: "0.8"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "40",
+        y1: "50",
+        x2: "36",
+        y2: "80"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "50",
+        x2: "50",
+        y2: "82"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "60",
+        y1: "50",
+        x2: "64",
+        y2: "80"
+      })), /*#__PURE__*/React.createElement("path", {
+        d: "M34 56 L62 48 Q72 46 72 56 Q72 64 62 62 L34 62 Z",
+        fill: gold
+      }));
+      break;
+    case 53:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("g", {
+        fill: mid
+      }, /*#__PURE__*/React.createElement("ellipse", {
+        cx: "34",
+        cy: "34",
+        rx: "18",
+        ry: "9"
+      }), /*#__PURE__*/React.createElement("ellipse", {
+        cx: "68",
+        cy: "40",
+        rx: "18",
+        ry: "9"
+      })), /*#__PURE__*/React.createElement("rect", {
+        x: "44",
+        y: "38",
+        width: "12",
+        height: "78",
+        fill: "url(#glowGold)",
+        opacity: "0.8"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M52 44 L46 62 L54 58 L48 80",
+        stroke: gold,
+        strokeWidth: "2.4",
+        fill: "none"
+      }));
+      break;
+    case 54:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M44 92 V52 L56 44 L68 52 V92 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "52",
+        y: "68",
+        width: "8",
+        height: "24",
+        fill: ink
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M28 92 V46 a7 7 0 0 1 14 0",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "4"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "35",
+        cy: "44",
+        r: "4",
+        fill: "url(#glowWarm)"
+      }));
+      break;
+    case 55:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "70",
+        cy: "38",
+        r: "16",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 116 L40 88 L60 88 L20 116 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M62 88 L82 116 L100 116 L80 88 Z",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M40 64 C32 58 32 46 40 40",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "4"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M56 64 C64 58 64 46 56 40",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "4"
+      }));
+      break;
+    case 56:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "78",
+        width: "100",
+        height: "38",
+        fill: "url(#water)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M44 78 L42 38 L54 38 L52 78 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "40",
+        y: "30",
+        width: "16",
+        height: "10",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "48",
+        cy: "35",
+        r: "4",
+        fill: "#fff3c0"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M48 35 L84 24 M48 35 L86 40",
+        stroke: "url(#glowGold)",
+        strokeWidth: "3",
+        opacity: "0.7"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 78 L66 78 L60 88 L36 88 Z",
+        fill: mid
+      }));
+      break;
+    case 57:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "40",
+        r: "16",
+        fill: "url(#glowWarm)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 56 C42 48 45 38 50 43 C55 38 58 48 50 56 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 70 C36 84 64 84 70 70",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "4"
+      }));
+      break;
+    case 58:
+      sky = "skyDeep";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "30",
+        width: "100",
+        height: "86",
+        fill: "url(#water)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "42",
+        y: "6",
+        width: "16",
+        height: "60",
+        fill: "url(#glowGold)",
+        opacity: "0.7"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "34",
+        r: "5",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "4"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "38",
+        x2: "50",
+        y2: "86",
+        stroke: gold,
+        strokeWidth: "5"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "40",
+        y1: "48",
+        x2: "60",
+        y2: "48",
+        stroke: gold,
+        strokeWidth: "4"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 76 C30 86 40 90 50 90 C60 90 70 86 70 76",
+        fill: "none",
+        stroke: gold,
+        strokeWidth: "5"
+      }));
+      break;
+    case 59:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "38",
+        r: "16",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "47",
+        y: "40",
+        width: "6",
+        height: "44",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "30",
+        y: "40",
+        width: "40",
+        height: "4",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 42 L24 56 H36 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M70 42 L64 56 H76 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "38",
+        y: "84",
+        width: "24",
+        height: "4",
+        fill: gold
+      }));
+      break;
+    case 60:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "68",
+        width: "100",
+        height: "48",
+        fill: "url(#water)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 70 q10 -8 20 0 t20 0 t20 0 t20 0 t20 0",
+        fill: "none",
+        stroke: "#bfe6ee",
+        strokeWidth: "1.6",
+        opacity: "0.6"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M34 92 L40 60 L62 56 L72 84 L66 92 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M30 70 q6 -10 12 -4 M70 72 q-6 -10 -12 -4",
+        stroke: "#d8eef4",
+        strokeWidth: "2",
+        fill: "none",
+        opacity: "0.7"
+      }));
+      break;
+    case 61:
+      sky = "skyDawn";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+        d: "M0 116 L34 64 L52 90 L72 60 L100 116 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "62",
+        cy: "34",
+        r: "10",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M62 22 l2.5 7 7.5 0 -6 4.5 2.3 7.5 -6.3 -4.6 -6.3 4.6 2.3 -7.5 -6 -4.5 7.5 0 Z",
+        fill: gold
+      }));
+      break;
+    case 62:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "52",
+        r: "26",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 76 C30 58 35 36 50 48 C65 36 70 58 50 76 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "2",
+        opacity: "0.8"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "12",
+        x2: "50",
+        y2: "22"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "22",
+        y1: "26",
+        x2: "28",
+        y2: "33"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "78",
+        y1: "26",
+        x2: "72",
+        y2: "33"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "14",
+        y1: "52",
+        x2: "24",
+        y2: "52"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "86",
+        y1: "52",
+        x2: "76",
+        y2: "52"
+      })));
+      break;
+    case 63:
+      sky = "skyDusk";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+        d: "M0 116 L42 56 L58 56 L100 116 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "42",
+        y: "48",
+        width: "16",
+        height: "40",
+        fill: ink
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "46",
+        y: "48",
+        width: "8",
+        height: "40",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M0 110 Q50 98 100 106 V116 H0 Z",
+        fill: dk
+      }));
+      break;
+    case 64:
+      sky = "skyNight";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, STARS, /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M28 56 L50 38 L72 56 Z",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "32",
+        y: "56",
+        width: "36",
+        height: "36",
+        fill: mid
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "44",
+        y: "64",
+        width: "12",
+        height: "12",
+        fill: "url(#fire)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "60",
+        y: "64",
+        width: "8",
+        height: "10",
+        fill: "url(#fire)"
+      }));
+      break;
+    case 65:
+      sky = "skyStorm";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+        d: "M44 38 L62 60 M64 38 L46 60",
+        stroke: gold,
+        strokeWidth: "3"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M50 30 L66 35 V52 C66 64 58 72 50 76 C42 72 34 64 34 52 V35 Z",
+        fill: gold
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M70 14 L66 26 L72 24 L68 36",
+        stroke: "#cfe0ec",
+        strokeWidth: "2",
+        fill: "none",
+        opacity: "0.7"
+      }));
+      break;
+    case 66:
+      sky = "skyHoly";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ellipse", {
+        cx: "50",
+        cy: "40",
+        rx: "40",
+        ry: "30",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("g", {
+        stroke: gold,
+        strokeWidth: "1.6",
+        opacity: "0.7"
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: "50",
+        y1: "4",
+        x2: "50",
+        y2: "20"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "20",
+        y1: "14",
+        x2: "28",
+        y2: "26"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "80",
+        y1: "14",
+        x2: "72",
+        y2: "26"
+      })), /*#__PURE__*/React.createElement("g", {
+        fill: gold
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: "16",
+        y: "60",
+        width: "10",
+        height: "32"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "30",
+        y: "50",
+        width: "12",
+        height: "42"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "46",
+        y: "44",
+        width: "12",
+        height: "48"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "62",
+        y: "52",
+        width: "12",
+        height: "40"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "78",
+        y: "62",
+        width: "9",
+        height: "30"
+      })), /*#__PURE__*/React.createElement("g", {
+        fill: ink
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: "34",
+        y: "74",
+        width: "4",
+        height: "18"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "50",
+        y: "70",
+        width: "4",
+        height: "22"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "66",
+        y: "76",
+        width: "4",
+        height: "16"
+      })), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }));
+      break;
+    default:
+      sky = "skyDeep";
+      s = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: "50",
+        cy: "50",
+        r: "16",
+        fill: "url(#glowGold)"
+      }), /*#__PURE__*/React.createElement("rect", {
+        x: "0",
+        y: "92",
+        width: "100",
+        height: "24",
+        fill: dk
+      }));
+  }
+  return /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 100 116",
+    width: "100%",
+    height: "100%",
+    preserveAspectRatio: "xMidYMid slice",
+    style: {
+      display: "block"
+    }
+  }, /*#__PURE__*/React.createElement("rect", {
+    width: "100",
+    height: "116",
+    fill: `url(#${sky})`
+  }), s, /*#__PURE__*/React.createElement("rect", {
+    width: "100",
+    height: "116",
+    fill: "url(#fwVignette)"
+  }));
+}
+
+// Shared, defined once: skies, water, glows, metal gradients, vignette
+function EmblemDefs() {
+  const sky = (id, stops) => /*#__PURE__*/React.createElement("linearGradient", {
+    id: id,
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, stops.map((st, i) => /*#__PURE__*/React.createElement("stop", {
+    key: i,
+    offset: st[0],
+    stopColor: st[1]
+  })));
+  return /*#__PURE__*/React.createElement("svg", {
+    width: "0",
+    height: "0",
+    style: {
+      position: "absolute"
+    },
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("defs", null, sky("skyDeep", [["0%", "#1b2750"], ["100%", "#080b1a"]]), sky("skyNight", [["0%", "#2a1f5c"], ["60%", "#14112e"], ["100%", "#080718"]]), sky("skyGold", [["0%", "#f8dd95"], ["52%", "#c87b34"], ["100%", "#2a160e"]]), sky("skyDawn", [["0%", "#6a43b0"], ["58%", "#d98b4e"], ["100%", "#2a160e"]]), sky("skyDesert", [["0%", "#ecc079"], ["68%", "#b9692e"], ["100%", "#3a2012"]]), sky("skyStorm", [["0%", "#33414c"], ["100%", "#0a1015"]]), sky("skyHoly", [["0%", "#fff7da"], ["48%", "#f1c469"], ["100%", "#7c5320"]]), sky("skyDusk", [["0%", "#3a2c66"], ["60%", "#c76a5a"], ["100%", "#241130"]]), sky("water", [["0%", "#2f8f9e"], ["100%", "#0a242c"]]), /*#__PURE__*/React.createElement("radialGradient", {
+    id: "glowWarm",
+    cx: "0.5",
+    cy: "0.5",
+    r: "0.5"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0%",
+    stopColor: "rgba(255,228,158,0.85)"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: "rgba(255,228,158,0)"
+  })), /*#__PURE__*/React.createElement("radialGradient", {
+    id: "glowGold",
+    cx: "0.5",
+    cy: "0.5",
+    r: "0.5"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#fff4c6"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "45%",
+    stopColor: "rgba(247,200,90,0.55)"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: "rgba(247,200,90,0)"
+  })), /*#__PURE__*/React.createElement("radialGradient", {
+    id: "fire",
+    cx: "0.5",
+    cy: "0.6",
+    r: "0.55"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#ffe98a"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "50%",
+    stopColor: "#ff7a1e"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: "rgba(255,80,10,0)"
+  })), /*#__PURE__*/React.createElement("radialGradient", {
+    id: "fwVignette",
+    cx: "0.5",
+    cy: "0.42",
+    r: "0.75"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "55%",
+    stopColor: "rgba(0,0,0,0)"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: "rgba(0,0,0,0.5)"
+  })), /*#__PURE__*/React.createElement("linearGradient", {
+    id: "fwGold",
+    x1: "0",
+    y1: "0",
+    x2: "0.45",
+    y2: "1"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#fff1c9"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "38%",
+    stopColor: "#e6c277"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "74%",
+    stopColor: "#b1843c"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#6f5022"
+  })), /*#__PURE__*/React.createElement("linearGradient", {
+    id: "fwGoldBright",
+    x1: "0",
+    y1: "0",
+    x2: "0.45",
+    y2: "1"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#fffbe9"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "44%",
+    stopColor: "#f7da8c"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#cf9c46"
+  }))));
+}
+function Plaque({
+  book,
+  focused,
+  onClick,
+  reflection = false
+}) {
+  const ac = accent(book.testament);
+  const cat = categoryColor(book.category);
+  const artH = Math.round((ROW_H - 14) * 0.72); // artwork ~72% of the plate
+  const [imgOk, setImgOk] = useState(false); // real image finished loading
+  const [imgDead, setImgDead] = useState(false); // no image present yet
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: onClick,
+    style: {
+      width: COL_W - 14,
+      height: ROW_H - 14,
+      margin: 7,
+      position: "relative",
+      cursor: "pointer",
+      borderRadius: 3,
+      background: "linear-gradient(165deg,#15131f,#0a0910)",
+      border: `1px solid ${focused ? "rgba(214,184,112,0.85)" : "rgba(190,170,120,0.18)"}`,
+      boxShadow: focused ? `0 0 0 1px rgba(214,184,112,0.7), 0 0 32px -4px ${cat}, inset 0 1px 0 rgba(255,240,200,0.18)` : "inset 0 0 22px -10px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05)",
+      transform: focused ? "scale(1.05)" : "scale(1)",
+      transformOrigin: "center bottom",
+      transition: "transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease",
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 6,
+      borderRadius: 2,
+      overflow: "hidden",
+      border: "1px solid rgba(0,0,0,0.5)",
+      background: "#0a0b14"
+    }
+  }, reflection ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      background: `linear-gradient(160deg, ${cat}40, #0a0b14 72%)`
+    }
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, !imgOk && (USE_SCENE_FALLBACK ? /*#__PURE__*/React.createElement(BookScene, {
+    number: book.number,
+    focused: focused
+  }) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      background: `linear-gradient(160deg, ${cat}33, #0a0b14 78%)`
+    }
+  })), !imgDead && /*#__PURE__*/React.createElement("img", {
+    src: artworkSrc(book),
+    alt: book.name,
+    loading: "lazy",
+    decoding: "async",
+    onLoad: () => setImgOk(true),
+    onError: () => setImgDead(true),
+    style: {
+      position: "absolute",
+      inset: 0,
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+      opacity: imgOk ? 1 : 0,
+      transition: "opacity 0.45s ease"
+    }
+  }), !(IMAGE_HAS_OWN_TITLE && imgOk) && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: "46%",
+      pointerEvents: "none",
+      background: "linear-gradient(180deg, rgba(8,7,14,0) 0%, rgba(8,7,14,0.35) 55%, rgba(5,4,10,0.7) 100%)"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      left: "50%",
+      bottom: focused ? 13 : 10,
+      transform: "translateX(-50%)",
+      minWidth: "62%",
+      maxWidth: "90%",
+      padding: focused ? "6px 14px 5px" : "5px 11px 4px",
+      textAlign: "center",
+      pointerEvents: "none",
+      borderRadius: 7,
+      background: "linear-gradient(180deg, #f6e7bd 0%, #e7cf92 40%, #cba85d 100%)",
+      border: "1.5px solid #856526",
+      boxShadow: "0 2px 7px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,250,231,0.9), inset 0 0 0 1.5px rgba(255,247,222,0.45), inset 0 -1px 0 rgba(110,82,28,0.7)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "Georgia,'Times New Roman',serif",
+      fontSize: focused ? 13.5 : 11.5,
+      fontWeight: 700,
+      letterSpacing: 1.1,
+      textTransform: "uppercase",
+      color: "#3b2b0c",
+      lineHeight: 1.05,
+      textShadow: "0 1px 0 rgba(255,250,235,0.55)"
+    }
+  }, book.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 1.5,
+      fontSize: 7,
+      fontWeight: 700,
+      letterSpacing: 1.8,
+      textTransform: "uppercase",
+      color: "#715318"
+    }
+  }, book.memoryWord))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: 9,
+      left: 10,
+      fontSize: 9,
+      letterSpacing: 1,
+      color: "rgba(255,240,205,0.92)",
+      fontFamily: "Georgia, serif",
+      textShadow: "0 1px 2px rgba(0,0,0,0.9)"
+    }
+  }, String(book.number).padStart(2, "0")), focused && !reflection && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: 6,
+      left: 6,
+      right: 6,
+      height: (ROW_H - 14) * 0.4,
+      pointerEvents: "none",
+      borderRadius: 2,
+      background: "linear-gradient(180deg, rgba(255,240,200,0.12), transparent)"
+    }
+  }));
+}
+
+// One row of plaques (a horizontal shelf on the wall)
+function Shelf({
+  booksInRow,
+  top,
+  focusedCol,
+  onPick,
+  interactive
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top,
+      left: 0,
+      width: WALL_W,
+      height: ROW_H
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      bottom: -ROW_GAP / 2,
+      left: 0,
+      width: WALL_W,
+      height: 2,
+      background: "linear-gradient(90deg, rgba(212,175,90,0.0), rgba(212,175,90,0.35), rgba(212,175,90,0.0))"
+    }
+  }), booksInRow.map((book, c) => book ? /*#__PURE__*/React.createElement("div", {
+    key: book.number,
+    style: {
+      position: "absolute",
+      left: c * COL_W,
+      top: 0,
+      width: COL_W,
+      height: ROW_H,
+      pointerEvents: interactive ? "auto" : "none"
+    }
+  }, /*#__PURE__*/React.createElement(Plaque, {
+    book: book,
+    focused: interactive && c === focusedCol,
+    onClick: () => interactive && onPick(book, c),
+    reflection: !interactive
+  })) : null));
+}
+const detailBackBtn = {
+  width: 40,
+  height: 40,
+  borderRadius: "50%",
+  flex: "0 0 auto",
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(212,184,120,0.5)",
+  color: "#f0dca2",
+  fontSize: 24,
+  lineHeight: 1,
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center"
+};
+function navStyle(disabled, ac) {
+  return {
+    flex: 1,
+    padding: "11px 0",
+    borderRadius: 9,
+    cursor: disabled ? "default" : "pointer",
+    background: "rgba(255,255,255,0.05)",
+    color: disabled ? "#6b6b78" : "#efe9da",
+    border: `1px solid ${ac}44`,
+    fontSize: 13,
+    fontWeight: 700,
+    opacity: disabled ? 0.4 : 1
+  };
+}
+
+// The book page: poster again + About + chapter list (and the reader)
+function BookDetail({
+  book,
+  onClose
+}) {
+  const [chapter, setChapter] = useState(null);
+  const [imgOk, setImgOk] = useState(false);
+  const ac = accent(book.testament);
+  const n = book.chapters || 1;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 60,
+      overflowY: "auto",
+      WebkitOverflowScrolling: "touch",
+      background: "radial-gradient(120% 100% at 50% 0%, #14163a 0%, #090a18 55%, #04050d 100%)",
+      color: "#ece9f5",
+      fontFamily: "'Trebuchet MS','Segoe UI',sans-serif"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "sticky",
+      top: 0,
+      zIndex: 5,
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      padding: "calc(env(safe-area-inset-top,0px) + 10px) 14px 10px",
+      background: "linear-gradient(180deg, rgba(6,7,16,0.95), rgba(6,7,16,0))"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: chapter ? () => setChapter(null) : onClose,
+    style: detailBackBtn,
+    "aria-label": "Back"
+  }, "\u2039"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      letterSpacing: 2,
+      opacity: 0.7,
+      textTransform: "uppercase"
+    }
+  }, chapter ? `${book.name} ${chapter}` : "Back to the Wall")), chapter ? /*#__PURE__*/React.createElement(ChapterReader, {
+    book: book,
+    chapter: chapter,
+    total: n,
+    setChapter: setChapter,
+    ac: ac
+  }) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxWidth: 760,
+      margin: "0 auto",
+      padding: "4px 18px 70px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "relative",
+      width: "100%",
+      maxWidth: 330,
+      margin: "6px auto 18px",
+      aspectRatio: "6 / 7",
+      borderRadius: 14,
+      overflow: "hidden",
+      border: `1px solid ${ac}55`,
+      boxShadow: "0 12px 44px rgba(0,0,0,0.6)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0
+    }
+  }, /*#__PURE__*/React.createElement(BookScene, {
+    number: book.number,
+    focused: true
+  })), /*#__PURE__*/React.createElement("img", {
+    src: artworkSrc(book),
+    alt: book.name,
+    onLoad: () => setImgOk(true),
+    onError: e => {
+      e.currentTarget.style.display = "none";
+    },
+    style: {
+      position: "absolute",
+      inset: 0,
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+      opacity: imgOk ? 1 : 0,
+      transition: "opacity .4s ease"
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      marginBottom: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 30,
+      fontWeight: 800,
+      letterSpacing: 1,
+      fontFamily: "Georgia, serif"
+    }
+  }, book.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      color: ac,
+      fontSize: 12,
+      fontWeight: 700,
+      letterSpacing: 3,
+      textTransform: "uppercase"
+    }
+  }, book.testament === "OT" ? "Old Testament" : "New Testament", " \xB7 ", book.category)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: 12,
+      padding: "14px 16px",
+      margin: "16px 0 22px",
+      lineHeight: 1.6,
+      fontSize: 15.5
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      letterSpacing: 2,
+      opacity: 0.55,
+      textTransform: "uppercase",
+      marginBottom: 6
+    }
+  }, "About this book"), book.summary), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      letterSpacing: 2,
+      opacity: 0.55,
+      textTransform: "uppercase",
+      marginBottom: 10
+    }
+  }, "Chapters \xB7 tap to read"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(52px, 1fr))",
+      gap: 8
+    }
+  }, Array.from({
+    length: n
+  }, (_, i) => i + 1).map(c => /*#__PURE__*/React.createElement("button", {
+    key: c,
+    onClick: () => {
+      setChapter(c);
+      window.scrollTo(0, 0);
+    },
+    style: {
+      padding: "12px 0",
+      borderRadius: 9,
+      cursor: "pointer",
+      background: "rgba(255,255,255,0.05)",
+      color: "#efe9da",
+      border: `1px solid ${ac}44`,
+      fontSize: 15,
+      fontWeight: 700
+    }
+  }, c)))));
+}
+
+// Loads the actual chapter text live (same source the app uses)
+function ChapterReader({
+  book,
+  chapter,
+  total,
+  setChapter,
+  ac
+}) {
+  const [st, setSt] = useState({
+    loading: true,
+    error: null,
+    data: null
+  });
+  useEffect(() => {
+    let alive = true;
+    setSt({
+      loading: true,
+      error: null,
+      data: null
+    });
+    const ref = encodeURIComponent(`${book.name} ${chapter}`);
+    fetch(`https://bible-api.com/${ref}?translation=kjv`).then(r => {
+      if (!r.ok) throw new Error("Couldn't load this chapter.");
+      return r.json();
+    }).then(d => {
+      if (alive) setSt({
+        loading: false,
+        error: null,
+        data: d
+      });
+    }).catch(e => {
+      if (alive) setSt({
+        loading: false,
+        error: e.message || "Load failed",
+        data: null
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [book, chapter]);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxWidth: 760,
+      margin: "0 auto",
+      padding: "4px 0 70px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "0 18px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 26,
+      fontWeight: 800,
+      fontFamily: "Georgia, serif"
+    }
+  }, book.name, " ", chapter)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 20px 0",
+      lineHeight: 1.75,
+      fontSize: 17
+    }
+  }, st.loading && /*#__PURE__*/React.createElement("div", {
+    style: {
+      opacity: 0.6,
+      textAlign: "center",
+      padding: "30px 0"
+    }
+  }, "Loading\u2026"), st.error && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#e79",
+      textAlign: "center",
+      padding: "24px 0"
+    }
+  }, st.error, /*#__PURE__*/React.createElement("br", null), "Check your connection and try again."), st.data && st.data.verses && st.data.verses.map(v => /*#__PURE__*/React.createElement("span", {
+    key: v.verse
+  }, /*#__PURE__*/React.createElement("sup", {
+    style: {
+      color: ac,
+      fontWeight: 700,
+      fontSize: 11,
+      marginRight: 4
+    }
+  }, v.verse), String(v.text).replace(/\s+/g, " ").trim(), " "))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      gap: 12,
+      maxWidth: 760,
+      margin: "26px auto 0",
+      padding: "0 18px"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: chapter <= 1,
+    onClick: () => {
+      setChapter(chapter - 1);
+      window.scrollTo(0, 0);
+    },
+    style: navStyle(chapter <= 1, ac)
+  }, "\u2039 Prev"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setChapter(null),
+    style: navStyle(false, ac)
+  }, "All chapters"), /*#__PURE__*/React.createElement("button", {
+    disabled: chapter >= total,
+    onClick: () => {
+      setChapter(chapter + 1);
+      window.scrollTo(0, 0);
+    },
+    style: navStyle(chapter >= total, ac)
+  }, "Next \u203A")));
+}
+function FocusWordBibleWall() {
+  const [focusedCol, setFocusedCol] = useState(0);
+  const [active, setActive] = useState(OT[0]);
+  const [openBook, setOpenBook] = useState(null);
+  const pos = useRef(0); // current position (float book column)
+  const vel = useRef(0); // velocity in columns per frame
+  const dragging = useRef(false);
+  const dragMoved = useRef(false);
+  const snapTo = useRef(null); // target column to ease toward (taps / arrows)
+  const lastX = useRef(0);
+  const lastY = useRef(0);
+  const lastT = useRef(0);
+  const lastCol = useRef(0);
+  const pinned = useRef(false);
+  const mainRef = useRef(null);
+  const stripRef = useRef(null);
+  const reflRef = useRef(null);
+  const rafId = useRef(null);
+  const clamp = v => Math.max(0, Math.min(COLS - 1, v));
+  const clampV = v => Math.max(-MAX_VEL, Math.min(MAX_VEL, v));
+
+  // Responsive: size the whole wall to fit the current screen
+  const [vp, setVp] = useState({
+    w: 1280,
+    h: 720
+  });
+  useEffect(() => {
+    const onResize = () => setVp({
+      w: window.innerWidth,
+      h: window.innerHeight
+    });
+    onResize();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
+  const scale = Math.max(0.42, Math.min(1.15, Math.min(vp.w / 1180, vp.h / 760)));
+  const isNarrow = vp.w < 760;
+  useEffect(() => {
+    const MAXC = COLS - 1;
+    const tick = () => {
+      let p = pos.current;
+      if (dragging.current) {
+        // finger drives position directly; velocity is tracked in the move handler
+      } else if (snapTo.current !== null) {
+        // ease toward a tapped/arrowed book
+        const d = snapTo.current - p;
+        p += d * SNAP;
+        if (Math.abs(d) < 0.002) {
+          p = snapTo.current;
+          snapTo.current = null;
+          vel.current = 0;
+        }
+      } else {
+        // free glide with friction
+        p += vel.current;
+        vel.current *= FRICTION;
+        // rubber-band at the ends
+        if (p < 0) {
+          p += (0 - p) * 0.18;
+          vel.current *= 0.6;
+        } else if (p > MAXC) {
+          p += (MAXC - p) * 0.18;
+          vel.current *= 0.6;
+        }
+        // when slow enough, settle onto the nearest book
+        if (Math.abs(vel.current) < STOP_VEL) {
+          vel.current = 0;
+          snapTo.current = clamp(Math.round(p));
+        }
+      }
+      pos.current = p;
+      const slide = -(p - FOCUS_INSET) * COL_W;
+      const t = `translateX(${slide}px)`;
+      if (stripRef.current) stripRef.current.style.transform = t;
+      if (reflRef.current) reflRef.current.style.transform = t;
+      const col = clamp(Math.round(p));
+      if (col !== lastCol.current) {
+        lastCol.current = col;
+        setFocusedCol(col);
+        if (!pinned.current) setActive(OT[col] || NT[col]);
+      }
+      rafId.current = requestAnimationFrame(tick);
+    };
+    rafId.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId.current);
+  }, []);
+
+  // Robust input: native listeners (so we can capture the gesture and stop the
+  // page from stealing it) + respond to swipes in ANY direction (a horizontal
+  // wall invites sideways swipes), plus mouse-drag on desktop.
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const begin = (x, y) => {
+      dragging.current = true;
+      dragMoved.current = false;
+      pinned.current = false;
+      snapTo.current = null;
+      vel.current = 0;
+      lastX.current = x;
+      lastY.current = y;
+      lastT.current = performance.now();
+    };
+    const move = (x, y) => {
+      if (!dragging.current) return;
+      const now = performance.now();
+      const dx = lastX.current - x;
+      const dy = lastY.current - y;
+      const raw = Math.abs(dx) >= Math.abs(dy) ? dx : dy; // dominant swipe axis
+      if (Math.abs(raw) > 3) dragMoved.current = true;
+      const dCols = raw * DRAG_SENS;
+      pos.current += dCols; // follow the finger
+      const dt = Math.max(8, now - lastT.current);
+      vel.current = clampV(vel.current * 0.35 + dCols * (16.7 / dt) * 0.65);
+      lastX.current = x;
+      lastY.current = y;
+      lastT.current = now;
+    };
+    const end = () => {
+      dragging.current = false;
+    };
+    const onWheel = e => {
+      e.preventDefault();
+      pinned.current = false;
+      snapTo.current = null;
+      vel.current = clampV(vel.current + e.deltaY * WHEEL_IMPULSE);
+    };
+    const ts = e => begin(e.touches[0].clientX, e.touches[0].clientY);
+    const tm = e => {
+      e.preventDefault();
+      move(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const md = e => begin(e.clientX, e.clientY);
+    const mm = e => move(e.clientX, e.clientY);
+    el.addEventListener("wheel", onWheel, {
+      passive: false
+    });
+    el.addEventListener("touchstart", ts, {
+      passive: false
+    });
+    el.addEventListener("touchmove", tm, {
+      passive: false
+    });
+    el.addEventListener("touchend", end);
+    el.addEventListener("touchcancel", end);
+    el.addEventListener("mousedown", md);
+    window.addEventListener("mousemove", mm);
+    window.addEventListener("mouseup", end);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", ts);
+      el.removeEventListener("touchmove", tm);
+      el.removeEventListener("touchend", end);
+      el.removeEventListener("touchcancel", end);
+      el.removeEventListener("mousedown", md);
+      window.removeEventListener("mousemove", mm);
+      window.removeEventListener("mouseup", end);
+    };
+  }, []);
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        pinned.current = false;
+        vel.current = 0;
+        snapTo.current = clamp(Math.round(pos.current) + 1);
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        pinned.current = false;
+        vel.current = 0;
+        snapTo.current = clamp(Math.round(pos.current) - 1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Don't jump to a book if the press was actually a drag/swipe
+  const pick = (book, col) => {
+    if (dragMoved.current) return;
+    pinned.current = true;
+    vel.current = 0;
+    setActive(book);
+    snapTo.current = clamp(col);
+    setOpenBook(book);
+  };
+  const ac = accent(active.testament);
+  const atmos = categoryColor(active.category); // room mood shifts with the focused book
+
+  const wallTransform = {
+    position: "absolute",
+    top: "50%",
+    left: isNarrow ? "4%" : "9%",
+    width: WALL_W,
+    height: WALL_H,
+    transformStyle: "preserve-3d",
+    transform: `translateY(-50%) scale(${scale}) rotateY(-${WALL_ANGLE}deg)`,
+    transformOrigin: "0% 50%"
+  };
+  return /*#__PURE__*/React.createElement("main", {
+    ref: mainRef,
+    style: {
+      position: "fixed",
+      inset: 0,
+      overflow: "hidden",
+      cursor: "grab",
+      background: "radial-gradient(140% 120% at 80% 30%, #121a3d 0%, #070a18 55%, #02030a 100%)",
+      color: "#e8eaf6",
+      fontFamily: "'Trebuchet MS','Segoe UI',sans-serif",
+      userSelect: "none",
+      perspective: `${PERSPECTIVE}px`,
+      perspectiveOrigin: "50% 46%",
+      touchAction: "none"
+    }
+  }, /*#__PURE__*/React.createElement(EmblemDefs, null), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: 20,
+      left: 0,
+      right: 0,
+      textAlign: "center",
+      fontSize: 12,
+      letterSpacing: 7,
+      opacity: 0.45,
+      zIndex: 6,
+      fontFamily: "Georgia, serif"
+    }
+  }, "T H E \xA0 S A C R E D \xA0 A R C H I V E"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      transformStyle: "preserve-3d",
+      zIndex: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: wallTransform
+  }, /*#__PURE__*/React.createElement("div", {
+    ref: stripRef,
+    style: {
+      position: "absolute",
+      inset: 0,
+      willChange: "transform"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: -34,
+      left: -40,
+      width: WALL_W + 80,
+      height: WALL_H + 80,
+      background: "linear-gradient(180deg, rgba(30,34,60,0.35), rgba(8,9,20,0.55))",
+      borderTop: "2px solid rgba(212,175,90,0.25)",
+      borderBottom: "2px solid rgba(212,175,90,0.25)"
+    }
+  }), /*#__PURE__*/React.createElement(Shelf, {
+    booksInRow: OT,
+    top: 0,
+    focusedCol: focusedCol,
+    onPick: pick,
+    interactive: true
+  }), /*#__PURE__*/React.createElement(Shelf, {
+    booksInRow: NT,
+    top: ROW_H + ROW_GAP,
+    focusedCol: focusedCol,
+    onPick: pick,
+    interactive: true
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: WALL_H + 14,
+      left: 0,
+      width: WALL_W,
+      height: WALL_H,
+      transform: "scaleY(-1)",
+      transformOrigin: "top",
+      opacity: 0.22,
+      WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 75%)",
+      maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 75%)",
+      pointerEvents: "none"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    ref: reflRef,
+    style: {
+      position: "absolute",
+      inset: 0,
+      willChange: "transform"
+    }
+  }, /*#__PURE__*/React.createElement(Shelf, {
+    booksInRow: OT,
+    top: 0,
+    focusedCol: -1,
+    onPick: () => {},
+    interactive: false
+  }), /*#__PURE__*/React.createElement(Shelf, {
+    booksInRow: NT,
+    top: ROW_H + ROW_GAP,
+    focusedCol: -1,
+    onPick: () => {},
+    interactive: false
+  }))), [-30, ROW_H + ROW_GAP / 2, WALL_H + 12].map((yy, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      position: "absolute",
+      left: -30,
+      width: WALL_W + 60,
+      top: yy,
+      height: i === 1 ? 1 : 2,
+      pointerEvents: "none",
+      background: `linear-gradient(90deg, rgba(196,168,104,0) 0%, ${atmos}cc 12%, rgba(255,245,220,0.9) 30%, ${atmos}88 70%, rgba(196,168,104,0) 100%)`,
+      boxShadow: `0 0 12px 1px ${atmos}aa`,
+      transition: "background 1.2s ease, box-shadow 1.2s ease"
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      left: 0,
+      width: WALL_W,
+      top: WALL_H + 13,
+      height: 6,
+      pointerEvents: "none",
+      background: `linear-gradient(90deg, transparent, ${atmos}55, transparent)`,
+      filter: "blur(3px)",
+      transition: "background 1.2s ease"
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      pointerEvents: "none",
+      zIndex: 2,
+      color: atmos,
+      opacity: 0.20,
+      transition: "color 1.3s ease",
+      background: "radial-gradient(65% 75% at 78% 40%, currentColor, transparent 62%)"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      pointerEvents: "none",
+      zIndex: 2,
+      color: atmos,
+      opacity: 0.08,
+      transition: "color 1.3s ease",
+      background: "linear-gradient(180deg, currentColor, transparent 45%)"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      pointerEvents: "none",
+      zIndex: 7,
+      background: "linear-gradient(100deg, rgba(2,3,10,0) 30%, rgba(2,3,10,0.25) 60%, rgba(2,3,10,0.85) 88%)"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: "26%",
+      pointerEvents: "none",
+      zIndex: 7,
+      background: "linear-gradient(to top, rgba(2,3,10,0.9), transparent)"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      right: 20,
+      bottom: 18,
+      fontSize: 11,
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
+      opacity: 0.75,
+      zIndex: 8
+    }
+  }, /*#__PURE__*/React.createElement(Legend, {
+    color: accent("OT"),
+    label: "TOP ROW \xB7 OLD TESTAMENT \xB7 39"
+  }), /*#__PURE__*/React.createElement(Legend, {
+    color: accent("NT"),
+    label: "BOTTOM ROW \xB7 NEW TESTAMENT \xB7 27"
+  })), openBook && /*#__PURE__*/React.createElement(BookDetail, {
+    book: openBook,
+    onClose: () => setOpenBook(null)
+  }));
+}
+function Tag({
+  label,
+  value,
+  color
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      padding: "8px 5px",
+      borderRadius: 7,
+      textAlign: "center",
+      background: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(255,255,255,0.07)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      opacity: 0.5,
+      fontSize: 9,
+      letterSpacing: 1
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color,
+      fontWeight: 700,
+      marginTop: 3,
+      fontSize: 12
+    }
+  }, value));
+}
+function Legend({
+  color,
+  label
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 9,
+      height: 9,
+      borderRadius: "50%",
+      background: color
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      letterSpacing: 1
+    }
+  }, label));
+}
+
+try {
+  ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(FocusWordBibleWall));
+} catch (e) {
+  showErr("Wall error:<br><br>" + (e && e.message ? e.message : e));
+}
+</script>
+</body>
+</html>
