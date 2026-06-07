@@ -3262,8 +3262,10 @@ function BookDetail({
       position: "fixed",
       inset: 0,
       zIndex: 60,
-      overflowY: "auto",
+      overflowY: "scroll",
       WebkitOverflowScrolling: "touch",
+      touchAction: "pan-y",
+      overscrollBehavior: "contain",
       background: "radial-gradient(120% 100% at 50% 0%, #14163a 0%, #090a18 55%, #04050d 100%)",
       color: "#ece9f5",
       fontFamily: "'Trebuchet MS','Segoe UI',sans-serif"
@@ -3730,7 +3732,7 @@ function FocusWordBibleWall() {
     transform: `translateY(-50%) scale(${scale}) rotateY(-${WALL_ANGLE}deg)`,
     transformOrigin: "0% 50%"
   };
-  return /*#__PURE__*/React.createElement("main", {
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     ref: mainRef,
     style: {
       position: "fixed",
@@ -3914,7 +3916,7 @@ function FocusWordBibleWall() {
   }), /*#__PURE__*/React.createElement(Legend, {
     color: accent("NT"),
     label: "BOTTOM ROW \xB7 NEW TESTAMENT \xB7 27"
-  })), openBook && /*#__PURE__*/React.createElement(BookDetail, {
+  }))), openBook && /*#__PURE__*/React.createElement(BookDetail, {
     book: openBook,
     onClose: () => setOpenBook(null)
   }));
