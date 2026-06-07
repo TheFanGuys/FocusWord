@@ -25,6 +25,7 @@
 <body>
 <div id="root"><div id="msg">Loading the Wall\u2026</div></div>
 <a id="backBtn" href="index.html" aria-label="Back to app">&#8249;</a>
+<div id="verTag" style="position:fixed;left:6px;bottom:5px;z-index:99999;font:600 10px system-ui;color:rgba(255,215,140,.55);letter-spacing:.5px;pointer-events:none">v-MAP1</div>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script>
@@ -594,9 +595,9 @@ const BIBLE_BOOKS = [{
 }];
 
 // ---- tuning knobs (safe to tweak) --------------------------------------
-const COL_W = 172; // width of one column slot (px)
-const ROW_H = 196; // height of one plaque (px)
-const ROW_GAP = 30; // vertical gap between OT row and NT row (px)
+const COL_W = 348; // width of one column slot (px) — bigger now that it's one row
+const ROW_H = 410; // height of one plaque (px) — fills the full wall, top to bottom
+const ROW_GAP = 30; // (legacy) spacing used for molding/rail offsets
 const WALL_ANGLE = 40; // degrees the whole wall is rotated away (bigger = more dramatic)
 const PERSPECTIVE = 900; // smaller = stronger perspective
 const FOCUS_INSET = 1.4; // how many columns of "already passed" books stay visible at front
@@ -608,11 +609,14 @@ const SNAP = 0.18; // how firmly it settles onto the nearest book
 const STOP_VEL = 0.022; // below this speed, it eases to a rest and snaps
 // ------------------------------------------------------------------------
 
-const OT = BIBLE_BOOKS.filter(b => b.testament === "OT");
-const NT = BIBLE_BOOKS.filter(b => b.testament === "NT");
-const COLS = Math.max(OT.length, NT.length); // 39
+const OT = BIBLE_BOOKS.filter(b => b.testament === "OT"); // 39
+const NT = BIBLE_BOOKS.filter(b => b.testament === "NT"); // 27
+const ALL = BIBLE_BOOKS; // all 66 in order, one row
+const NT_START = OT.length; // column where Matthew begins (39)
+const COLS = ALL.length; // 66
 const WALL_W = COLS * COL_W;
-const WALL_H = ROW_H * 2 + ROW_GAP;
+const WALL_H = ROW_H; // single row now
+
 const accent = t => t === "OT" ? "#b07dff" : "#48b4ff";
 
 // Atmospheric hue per book category — drives the room's mood as you travel
@@ -633,7 +637,7 @@ const categoryColor = cat => ({
 //   01-genesis.webp · 02-exodus.webp · 09-1-samuel.webp ·
 //   22-song-of-solomon.webp · 66-revelation.webp
 // Drop the files in and each card picks them up automatically — no code edits.
-const ART_BASE = "images/wall/"; // path relative to index.html (GitHub Pages)
+const ART_BASE = "images/wall/placards/"; // path relative to index.html (GitHub Pages)
 const ART_EXT = "jpg"; // images saved from Midjourney as JPG
 // While a card's image is missing, fall back to the approved illustrated scene.
 // Set this to false to fall back to a plain category-tinted panel instead.
@@ -650,7 +654,7 @@ function candidateSrcs(book) {
   const s = slug(book.name); // genesis, 1-samuel, song-of-solomon
   const capWords = x => x.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("-");
   const stems = [s, capWords(s), s.charAt(0).toUpperCase() + s.slice(1), book.name];
-  const bases = [ART_BASE, "images/"]; // images/wall/ first, then images/
+  const bases = [ART_BASE, "images/wall/", "images/"]; // new placards folder first, then old spots
   const exts = ["JPG", "jpg", "jpeg", "JPEG", "png", "PNG", "webp"];
   const seen = {},
     out = [];
@@ -3225,6 +3229,63 @@ function Shelf({
     reflection: !interactive
   })) : null));
 }
+
+// A glowing pillar + overhead banner that marks where a Testament begins
+function SectionSign({
+  x,
+  label,
+  sub,
+  color
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      left: x,
+      top: 0,
+      width: 3,
+      height: ROW_H,
+      pointerEvents: "none",
+      zIndex: 6,
+      background: `linear-gradient(180deg, ${color}00, ${color}cc 16%, #fff 50%, ${color}cc 84%, ${color}00)`,
+      boxShadow: `0 0 22px 4px ${color}aa`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      left: "50%",
+      top: -64,
+      transform: "translateX(-50%)",
+      whiteSpace: "nowrap",
+      padding: "9px 20px",
+      borderRadius: 9,
+      border: `1px solid ${color}`,
+      background: "linear-gradient(180deg, rgba(12,14,30,0.94), rgba(6,7,16,0.94))",
+      boxShadow: `0 0 26px ${color}88, inset 0 0 16px ${color}33`,
+      textAlign: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#fff",
+      fontFamily: "Georgia, serif",
+      fontSize: 16,
+      letterSpacing: 4,
+      textShadow: `0 0 12px ${color}`
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      opacity: 0.85,
+      marginRight: 8
+    }
+  }, "\u2726"), label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: color,
+      fontSize: 9.5,
+      letterSpacing: 2,
+      marginTop: 3,
+      opacity: 0.9
+    }
+  }, sub)));
+}
 const detailBackBtn = {
   width: 40,
   height: 40,
@@ -3902,7 +3963,7 @@ function ChapterReader({
 }
 function FocusWordBibleWall() {
   const [focusedCol, setFocusedCol] = useState(0);
-  const [active, setActive] = useState(OT[0]);
+  const [active, setActive] = useState(ALL[0]);
   const [openBook, setOpenBook] = useState(null);
   useEffect(() => {
     openRef.current = !!openBook;
@@ -4000,7 +4061,7 @@ function FocusWordBibleWall() {
         lastCol.current = col;
         setFocusedCol(col);
         if (!pinned.current) {
-          const b = OT[col] || NT[col];
+          const b = ALL[col];
           setActive(b);
           if (b) console.log(`Focused Book: ${b.name}`);
         }
@@ -4219,17 +4280,21 @@ function FocusWordBibleWall() {
       borderBottom: "2px solid rgba(212,175,90,0.25)"
     }
   }), /*#__PURE__*/React.createElement(Shelf, {
-    booksInRow: OT,
+    booksInRow: ALL,
     top: 0,
     focusedCol: focusedCol,
     onPick: pick,
     interactive: true
-  }), /*#__PURE__*/React.createElement(Shelf, {
-    booksInRow: NT,
-    top: ROW_H + ROW_GAP,
-    focusedCol: focusedCol,
-    onPick: pick,
-    interactive: true
+  }), /*#__PURE__*/React.createElement(SectionSign, {
+    x: 0,
+    label: "OLD TESTAMENT",
+    sub: "GENESIS \\u00b7 39 BOOKS",
+    color: "#b07dff"
+  }), /*#__PURE__*/React.createElement(SectionSign, {
+    x: NT_START * COL_W,
+    label: "NEW TESTAMENT",
+    sub: "MATTHEW \\u00b7 27 BOOKS",
+    color: "#48b4ff"
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
@@ -4252,18 +4317,12 @@ function FocusWordBibleWall() {
       willChange: "transform"
     }
   }, /*#__PURE__*/React.createElement(Shelf, {
-    booksInRow: OT,
+    booksInRow: ALL,
     top: 0,
     focusedCol: -1,
     onPick: () => {},
     interactive: false
-  }), /*#__PURE__*/React.createElement(Shelf, {
-    booksInRow: NT,
-    top: ROW_H + ROW_GAP,
-    focusedCol: -1,
-    onPick: () => {},
-    interactive: false
-  }))), [-30, ROW_H + ROW_GAP / 2, WALL_H + 12].map((yy, i) => /*#__PURE__*/React.createElement("div", {
+  }))), [-30, WALL_H + 12].map((yy, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
       position: "absolute",
@@ -4343,10 +4402,10 @@ function FocusWordBibleWall() {
     }
   }, /*#__PURE__*/React.createElement(Legend, {
     color: accent("OT"),
-    label: "TOP ROW \xB7 OLD TESTAMENT \xB7 39"
+    label: "OLD TESTAMENT \xB7 39 BOOKS"
   }), /*#__PURE__*/React.createElement(Legend, {
     color: accent("NT"),
-    label: "BOTTOM ROW \xB7 NEW TESTAMENT \xB7 27"
+    label: "NEW TESTAMENT \xB7 27 BOOKS"
   }))), openBook && /*#__PURE__*/React.createElement(BookDetail, {
     book: openBook,
     onClose: () => setOpenBook(null)
@@ -4404,7 +4463,6 @@ function Legend({
     }
   }, label));
 }
-
 try {
   ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(FocusWordBibleWall));
 } catch (e) {
