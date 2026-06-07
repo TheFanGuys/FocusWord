@@ -32,6 +32,7 @@
   window.addEventListener("error", function(e){ showErr("Something went wrong loading the Wall:<br><br>"+(e.message||e)); });
   if(!window.React || !window.ReactDOM){ showErr("Couldn\u2019t load React from the internet. Check your connection and refresh."); }
   (function(){ var b=document.getElementById("backBtn");
+    if(window.self !== window.top){ if(b) b.style.display="none"; return; }
     if(b) b.addEventListener("click", function(ev){ if(history.length>1){ ev.preventDefault(); history.back(); } }); })();
 </script>
 <script>
@@ -642,6 +643,59 @@ const USE_SCENE_FALLBACK = true;
 const IMAGE_HAS_OWN_TITLE = false;
 const slug = name => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 const artworkSrc = book => `${ART_BASE}${slug(book.name)}.${ART_EXT}`;
+
+// Try several likely filenames so the image loads regardless of how it was saved
+// (lowercase, Capitalized, spaces, .jpg/.jpeg/.png). First one that exists wins.
+function candidateSrcs(book) {
+  const s = slug(book.name); // genesis, 1-samuel, song-of-solomon
+  const capWords = x => x.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("-");
+  const stems = [s, capWords(s), s.charAt(0).toUpperCase() + s.slice(1), book.name];
+  const bases = [ART_BASE, "images/"]; // images/wall/ first, then images/
+  const exts = ["JPG", "jpg", "jpeg", "JPEG", "png", "PNG", "webp"];
+  const seen = {},
+    out = [];
+  stems.forEach(st => bases.forEach(b => exts.forEach(e => {
+    const u = `${b}${st}.${e}`;
+    if (!seen[u]) {
+      seen[u] = 1;
+      out.push(u);
+    }
+  })));
+  return out;
+}
+function ArtImg({
+  book,
+  onLoaded,
+  fade = true
+}) {
+  const cands = candidateSrcs(book);
+  const [i, setI] = useState(0);
+  const [ok, setOk] = useState(false);
+  if (i >= cands.length) return null; // all failed -> the scene behind it stays visible
+  return /*#__PURE__*/React.createElement("img", {
+    src: cands[i],
+    alt: book.name,
+    loading: "lazy",
+    decoding: "async",
+    onLoad: () => {
+      setOk(true);
+      if (onLoaded) onLoaded();
+    },
+    onError: () => {
+      setOk(false);
+      setI(i + 1);
+    },
+    style: {
+      position: "absolute",
+      inset: 0,
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+      opacity: ok ? 1 : 0,
+      transition: fade ? "opacity 0.45s ease" : "none"
+    }
+  });
+}
 // -------------------------------------------------------------------------
 
 const STARS = /*#__PURE__*/React.createElement("g", {
@@ -3048,22 +3102,9 @@ function Plaque({
       inset: 0,
       background: `linear-gradient(160deg, ${cat}33, #0a0b14 78%)`
     }
-  })), !imgDead && /*#__PURE__*/React.createElement("img", {
-    src: artworkSrc(book),
-    alt: book.name,
-    loading: "lazy",
-    decoding: "async",
-    onLoad: () => setImgOk(true),
-    onError: () => setImgDead(true),
-    style: {
-      position: "absolute",
-      inset: 0,
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      opacity: imgOk ? 1 : 0,
-      transition: "opacity 0.45s ease"
-    }
+  })), /*#__PURE__*/React.createElement(ArtImg, {
+    book: book,
+    onLoaded: () => setImgOk(true)
   }), !(IMAGE_HAS_OWN_TITLE && imgOk) && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
@@ -3281,22 +3322,9 @@ function BookDetail({
   }, /*#__PURE__*/React.createElement(BookScene, {
     number: book.number,
     focused: true
-  })), /*#__PURE__*/React.createElement("img", {
-    src: artworkSrc(book),
-    alt: book.name,
-    onLoad: () => setImgOk(true),
-    onError: e => {
-      e.currentTarget.style.display = "none";
-    },
-    style: {
-      position: "absolute",
-      inset: 0,
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      opacity: imgOk ? 1 : 0,
-      transition: "opacity .4s ease"
-    }
+  })), /*#__PURE__*/React.createElement(ArtImg, {
+    book: book,
+    onLoaded: () => setImgOk(true)
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
