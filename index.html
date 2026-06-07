@@ -656,7 +656,7 @@ function go(tab){
   } else if(tab==='wall'){
     document.getElementById('screen-wall').classList.add('active');
     document.querySelector('.tab[data-tab="home"]').classList.add('active');
-    var wf=document.getElementById('wallFrame'); if(wf && !wf.src) wf.src='wall.html';
+    var wf=document.getElementById('wallFrame'); if(wf && !wf.src) wf.src='wall.html?t='+Date.now();
   } else {
     // sub screen
     document.getElementById('screen-sub').classList.add('active');
