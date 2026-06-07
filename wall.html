@@ -3263,56 +3263,69 @@ const MAP_BASE = "images/wall/maps/";
 const BOOK_MAPS = {
   "Leviticus": {
     file: "leviticus",
-    aspect: "16 / 9",
     hotspots: [{
-      x: 3,
-      y: 10,
-      w: 22,
-      h: 30,
-      label: "Offerings & Sacrifices",
-      ch: [1, 7]
+      x: 44.1,
+      y: 30.6,
+      w: 23.8,
+      h: 39.3,
+      label: "Tabernacle",
+      ch: [1, 27]
     }, {
-      x: 39,
-      y: 3,
-      w: 24,
-      h: 28,
-      label: "Day of Atonement",
-      ch: [16, 16]
+      x: 5.3,
+      y: 7.3,
+      w: 15.6,
+      h: 26.6,
+      label: "Holy Fire",
+      ch: [1, 9]
     }, {
-      x: 69,
-      y: 3,
-      w: 29,
-      h: 36,
-      label: "Priesthood & Garments",
+      x: 71.3,
+      y: 5.1,
+      w: 20.5,
+      h: 28.0,
+      label: "Priesthood",
       ch: [8, 10]
     }, {
-      x: 2,
-      y: 66,
-      w: 23,
-      h: 30,
-      label: "Clean & Unclean",
+      x: 40.6,
+      y: 3.3,
+      w: 20.9,
+      h: 23.3,
+      label: "God\u2019s Presence",
+      ch: [16, 16]
+    }, {
+      x: 81.4,
+      y: 41.1,
+      w: 12.7,
+      h: 24.4,
+      label: "Lampstand",
+      ch: [24, 24]
+    }, {
+      x: 4.5,
+      y: 43.0,
+      w: 11.1,
+      h: 19.7,
+      label: "Worship",
+      ch: [1, 10]
+    }, {
+      x: 22.3,
+      y: 69.5,
+      w: 9.0,
+      h: 23.7,
+      label: "Purity",
       ch: [11, 15]
     }, {
-      x: 35,
-      y: 36,
-      w: 31,
-      h: 38,
-      label: "Holiness & Tabernacle",
-      ch: [17, 22]
+      x: 42.8,
+      y: 75.4,
+      w: 16.8,
+      h: 17.5,
+      label: "Sacrifices",
+      ch: [1, 7]
     }, {
-      x: 79,
-      y: 45,
-      w: 19,
-      h: 32,
-      label: "Feasts, Lamp & Bread",
-      ch: [23, 25]
-    }, {
-      x: 74,
-      y: 72,
-      w: 24,
-      h: 26,
-      label: "Blessings & Vows",
-      ch: [26, 27]
+      x: 83.8,
+      y: 75.0,
+      w: 8.8,
+      h: 17.5,
+      label: "Cleansing",
+      ch: [14, 15]
     }]
   }
 };
@@ -3368,7 +3381,6 @@ function MapView({
     style: {
       position: "relative",
       width: "100%",
-      aspectRatio: map.aspect,
       borderRadius: 12,
       overflow: "hidden",
       border: `1px solid ${ac}44`,
@@ -3381,21 +3393,16 @@ function MapView({
     onLoad: () => setOk(true),
     onError: () => setI(i + 1),
     style: {
-      position: "absolute",
-      inset: 0,
+      display: "block",
       width: "100%",
-      height: "100%",
-      objectFit: "fill",
+      height: "auto",
       opacity: ok ? 1 : 0,
       transition: "opacity .4s ease"
     }
   }), !ok && /*#__PURE__*/React.createElement("div", {
     style: {
-      position: "absolute",
-      inset: 0,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
+      padding: "70px 0",
+      textAlign: "center",
       color: "#9a93b5",
       fontSize: 13
     }
