@@ -388,7 +388,7 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
         <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('pray')" data-ic="pray"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Journal</div></div>
         <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('canvas')" data-ic="canvas"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Canvas</div></div>
         <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="openAI()" data-ic="ai"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">AI Study</div></div>
-        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('wall')" data-ic="explore"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Bible</div></div>
+        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('wall')" data-ic="explore"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Visual Bible</div></div>
       </div>
     </div>
   </div>
@@ -616,6 +616,7 @@ let state = {
   chapters: DB.get('chapters',0),
   bookmarks: DB.get('bookmarks',[]),
   highlights: DB.get('highlights',{}),
+  highlightText: DB.get('highlightText',{}),
   journal: DB.get('journal',[]),
   canvases: DB.get('canvases',[]),
   activeCanvas: DB.get('activeCanvas',null),
@@ -627,7 +628,7 @@ let state = {
 function save(){
   DB.set('theme',state.theme); DB.set('trans',state.trans); DB.set('readMode',state.readMode);
   DB.set('streak',state.streak); DB.set('lastRead',state.lastRead); DB.set('chapters',state.chapters);
-  DB.set('bookmarks',state.bookmarks); DB.set('highlights',state.highlights); DB.set('journal',state.journal);
+  DB.set('bookmarks',state.bookmarks); DB.set('highlights',state.highlights); DB.set('highlightText',state.highlightText); DB.set('journal',state.journal);
   DB.set('canvases',state.canvases); DB.set('activeCanvas',state.activeCanvas); DB.set('geminiKey',state.geminiKey);
   DB.set('planProgress',state.planProgress); DB.set('readHistory',state.readHistory);
 }
@@ -717,7 +718,8 @@ share:'<circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="6" r="2.5"/><circ
 arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
 heart:'<path d="M12 20s-7-4.3-7-9.2A4 4 0 0 1 12 7a4 4 0 0 1 7 3.8C19 15.7 12 20 12 20Z"/>',
 map:'<rect x="3.5" y="5" width="7" height="6" rx="1"/><rect x="13.5" y="5" width="7" height="6" rx="1"/><rect x="3.5" y="14" width="7" height="5" rx="1"/><rect x="13.5" y="14" width="7" height="5" rx="1"/>',
-explore:'<circle cx="12" cy="12" r="9"/><path d="M16 8l-3 5-5 3 3-5 5-3Z"/>'
+explore:'<circle cx="12" cy="12" r="9"/><path d="M16 8l-3 5-5 3 3-5 5-3Z"/>',
+highlighter:'<path d="M9 14l-2 5 5-2 9-9-3-3-9 9Z"/><path d="M4 21h6"/>'
 };
 function ICON(name,size){
   const s=size||24;
@@ -1780,7 +1782,7 @@ function verseMenu(vid,el){
     <button class="btn btn-ghost" onclick="shareVerse('${esc(vid)}')">📤 Share</button>
   `);
 }
-function setHighlight(vid,c){ if(c)state.highlights[vid]=c; else delete state.highlights[vid]; save(); closeSheet(); renderRead(); toast(c?'Highlighted':'Highlight removed'); }
+function setHighlight(vid,c){ if(c){state.highlights[vid]=c; state.highlightText[vid]=_pendingVerseText||vid;} else {delete state.highlights[vid]; delete state.highlightText[vid];} save(); closeSheet(); renderRead(); toast(c?'Highlighted':'Highlight removed'); }
 function toggleBookmark(vid){
   const i=state.bookmarks.findIndex(b=>b.ref===vid);
   if(i>=0)state.bookmarks.splice(i,1); else state.bookmarks.unshift({ref:vid,text:_pendingVerseText,date:Date.now()});
@@ -2234,7 +2236,7 @@ function wrapText(ctx,text,x,y,maxW,lh){ const words=text.split(' '); let line='
 /* ============ MORE MENU ============ */
 const MORE_ITEMS={
   grow:[['progress','Progress','progress'],['timer','Focus Timer','timer'],['ai','AI Study','ai'],['plans','Reading Plans','plans']],
-  discover:[['topics','Find a Verse','heart'],['explorer','Bible Explorer','explore'],['bigpicture','The Big Picture','map'],['library','Library','library'],['bookmarks','Bookmarks','bookmark'],['science','Science & Brain','brain'],['evangelism','Start Here','cross'],['testimonies','Testimonies','people']],
+  discover:[['topics','Find a Verse','heart'],['explorer','Bible Explorer','explore'],['bigpicture','The Big Picture','map'],['library','Library','library'],['bookmarks','Bookmarks','bookmark'],['highlights','My Highlights','highlighter'],['science','Science & Brain','brain'],['evangelism','Start Here','cross'],['testimonies','Testimonies','people']],
   connect:[['videos','Videos & Links','video'],['community','Community','people']],
   app:[['settings','Settings','settings'],['mydata','My Data','data']]
 };
@@ -2248,10 +2250,10 @@ function renderMore(){
 
 /* ============ SUB SCREEN ROUTER ============ */
 function renderSub(id){
-  const titles={progress:'Progress',timer:'Focus Timer',ai:'AI Study',plans:'Reading Plans',bookmarks:'Bookmarks',science:'Science & Brain',evangelism:'Start Here',testimonies:'Testimonies',videos:'Videos & Links',community:'Community',mydata:'My Data',topics:'Find a Verse',bigpicture:'The Big Picture',explorer:'Bible Explorer'};
+  const titles={progress:'Progress',timer:'Focus Timer',ai:'AI Study',plans:'Reading Plans',bookmarks:'Bookmarks',highlights:'My Highlights',science:'Science & Brain',evangelism:'Start Here',testimonies:'Testimonies',videos:'Videos & Links',community:'Community',mydata:'My Data',topics:'Find a Verse',bigpicture:'The Big Picture',explorer:'Bible Explorer'};
   document.getElementById('subTitle').textContent=titles[id]||'Section';
   const c=document.getElementById('subContent');
-  const map={progress:renderProgress,timer:renderTimer,ai:renderAI,plans:renderPlans,bookmarks:renderBookmarks,science:renderScience,evangelism:renderEvangelism,testimonies:renderTestimonies,videos:renderVideos,community:renderCommunity,mydata:renderMyData,topics:renderTopics,bigpicture:renderBigPicture,explorer:renderExplorer};
+  const map={progress:renderProgress,timer:renderTimer,ai:renderAI,plans:renderPlans,bookmarks:renderBookmarks,highlights:renderHighlights,science:renderScience,evangelism:renderEvangelism,testimonies:renderTestimonies,videos:renderVideos,community:renderCommunity,mydata:renderMyData,topics:renderTopics,bigpicture:renderBigPicture,explorer:renderExplorer};
   c.innerHTML=(map[id]||(()=>'<div class="empty">Coming soon</div>'))();
   if(id==='timer')setTimer(25);
   if(id==='ai'){ c.innerHTML+=`<div style="position:sticky;bottom:0;background:var(--bg);padding:10px 0;display:flex;gap:8px;"><input id="aiInput" placeholder="Ask about the Bible…" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')sendAI()"><button class="iconbtn" style="flex-shrink:0;background:var(--teal);color:#fff;" onclick="sendAI()">➤</button></div>`; }
@@ -2705,6 +2707,26 @@ function renderBookmarks(){
   </div>`).join('');
 }
 
+/* ============ MY HIGHLIGHTS ============ */
+function renderHighlights(){
+  const keys=Object.keys(state.highlights);
+  if(!keys.length) return '<div class="empty"><div class="e-ico">🖍️</div>No highlights yet.<br>While reading, tap a verse and pick a color to save it here.</div>';
+  const intro='<div style="font-size:13px;color:var(--text-faint);margin-bottom:14px;text-align:center;">'+keys.length+' verse'+(keys.length===1?'':'s')+' saved · tap one to open it in context</div>';
+  const cards=keys.slice().reverse().map(vid=>{
+    const c=state.highlights[vid];
+    const t=(state.highlightText&&state.highlightText[vid])||'';
+    const chap=vid.replace(/:.*/,'');
+    return `<div class="card tap" style="border-left:4px solid ${c};" onclick="loadReading('${esc(chap)}')">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:${c};display:inline-block;"></span>
+        <span style="font-size:13px;font-weight:700;color:var(--gold);">${esc(vid)}</span>
+      </div>
+      ${t?`<div style="font-size:15px;line-height:1.6;color:var(--text-dim);">${esc(t).slice(0,200)}</div>`:`<div style="font-size:13px;color:var(--text-faint);">Tap to open ${esc(chap)}</div>`}
+    </div>`;
+  }).join('');
+  return intro+cards;
+}
+
 /* ============ MY DATA ============ */
 function renderMyData(){
   return `
@@ -2714,7 +2736,7 @@ function renderMyData(){
   <button class="btn btn-ghost" style="margin-top:12px;color:#e0607e;" onclick="wipeData()">🗑 Erase Everything</button>
   <input type="file" id="importFile" accept=".json" style="display:none;" onchange="doImport(event)">`;
 }
-function exportData(){ const data={}; ['theme','trans','streak','chapters','bookmarks','highlights','journal','canvases','planProgress','readHistory'].forEach(k=>data[k]=state[k]); const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='focusword-backup.json'; a.click(); toast('Backup saved!'); }
+function exportData(){ const data={}; ['theme','trans','streak','chapters','bookmarks','highlights','highlightText','journal','canvases','planProgress','readHistory'].forEach(k=>data[k]=state[k]); const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='focusword-backup.json'; a.click(); toast('Backup saved!'); }
 function importData(){ document.getElementById('importFile').click(); }
 function doImport(e){ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); Object.assign(state,d); save(); toast('Data imported!'); go('home'); }catch(err){ toast('Invalid file'); } }; r.readAsText(f); }
 function wipeData(){ if(!confirm('Erase ALL your data? This cannot be undone.'))return; if(!confirm('Are you absolutely sure?'))return; localStorage.clear(); location.reload(); }
