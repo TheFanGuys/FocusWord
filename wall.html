@@ -3134,10 +3134,10 @@ function Plaque({
       margin: 7,
       position: "relative",
       cursor: "pointer",
-      borderRadius: 3,
+      borderRadius: 4,
       background: "linear-gradient(165deg,#15131f,#0a0910)",
-      border: `1px solid ${focused ? "rgba(214,184,112,0.85)" : "rgba(190,170,120,0.18)"}`,
-      boxShadow: focused ? `0 0 0 1px rgba(214,184,112,0.7), 0 0 32px -4px ${cat}, inset 0 1px 0 rgba(255,240,200,0.18)` : "inset 0 0 22px -10px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05)",
+      border: `${focused ? 2 : 1.5}px solid ${focused ? "rgba(222,192,120,0.9)" : "rgba(190,170,120,0.28)"}`,
+      boxShadow: focused ? `0 0 0 1px rgba(214,184,112,0.7), 7px 11px 0 -2px rgba(7,6,13,0.95), 0 26px 40px -14px rgba(0,0,0,0.85), 0 0 34px -4px ${cat}, inset 0 1px 0 rgba(255,240,200,0.22), inset 0 -2px 4px rgba(0,0,0,0.5)` : `4px 7px 0 -2px rgba(7,6,13,0.9), 0 16px 26px -14px rgba(0,0,0,0.8), inset 0 0 22px -10px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -2px 4px rgba(0,0,0,0.45)`,
       transform: focused ? "scale(1.05)" : "scale(1)",
       transformOrigin: "center bottom",
       transition: "transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease",
@@ -4061,7 +4061,7 @@ function FocusWordBibleWall() {
       window.removeEventListener("orientationchange", onResize);
     };
   }, []);
-  const scale = Math.max(0.42, Math.min(1.15, Math.min(vp.w / 1180, vp.h / 760)));
+  const scale = Math.max(0.52, Math.min(1.2, Math.min(vp.w / 1040, vp.h / 700)));
   const isNarrow = vp.w < 760;
   useEffect(() => {
     const im = new Image();
@@ -4335,7 +4335,8 @@ function FocusWordBibleWall() {
       height: WALL_H + 80,
       background: "linear-gradient(180deg, rgba(30,34,60,0.35), rgba(8,9,20,0.55))",
       borderTop: "2px solid rgba(212,175,90,0.25)",
-      borderBottom: "2px solid rgba(212,175,90,0.25)"
+      borderBottom: "2px solid rgba(212,175,90,0.25)",
+      boxShadow: "0 26px 0 -8px rgba(6,6,14,0.7), 0 44px 60px -24px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,240,200,0.06)"
     }
   }), /*#__PURE__*/React.createElement(Shelf, {
     booksInRow: ALL,
