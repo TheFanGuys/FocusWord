@@ -3987,17 +3987,7 @@ function ChapterReader({
         return;
       }
       const range = sel.getRangeAt(0);
-      if (!box.contains(range.startContainer) || !box.contains(range.endContainer)) {
-        setBarOpen(false);
-        return;
-      }
-      const vEl = node => {
-        const el = node.nodeType === 3 ? node.parentNode : node;
-        return el && el.closest ? el.closest("[data-v]") : null;
-      };
-      const sEl = vEl(range.startContainer),
-        eEl = vEl(range.endContainer);
-      if (!sEl || !eEl) {
+      if (!box.contains(range.commonAncestorContainer)) {
         setBarOpen(false);
         return;
       }
@@ -4007,38 +3997,21 @@ function ChapterReader({
         r.setEnd(node, o);
         return r.toString().length;
       };
-      const verses = st.data && st.data.verses || [];
-      const sV = +sEl.getAttribute("data-v"),
-        eV = +eEl.getAttribute("data-v");
       const out = [];
-      if (sEl === eEl) {
-        const s = off(sEl, range.startContainer, range.startOffset);
-        const e = off(eEl, range.endContainer, range.endOffset);
+      box.querySelectorAll("[data-v]").forEach(span => {
+        const sr = document.createRange();
+        sr.selectNodeContents(span);
+        const intersects = range.compareBoundaryPoints(Range.END_TO_START, sr) < 0 && range.compareBoundaryPoints(Range.START_TO_END, sr) > 0;
+        if (!intersects) return; // selection doesn't touch this verse
+        const len = span.textContent.length;
+        const s = range.compareBoundaryPoints(Range.START_TO_START, sr) <= 0 ? 0 : off(span, range.startContainer, range.startOffset);
+        const e = range.compareBoundaryPoints(Range.END_TO_END, sr) >= 0 ? len : off(span, range.endContainer, range.endOffset);
         if (e > s) out.push({
-          v: sV,
+          v: +span.getAttribute("data-v"),
           s,
           e
         });
-      } else {
-        out.push({
-          v: sV,
-          s: off(sEl, range.startContainer, range.startOffset),
-          e: sEl.textContent.length
-        });
-        verses.forEach(x => {
-          if (x.verse > sV && x.verse < eV) out.push({
-            v: x.verse,
-            s: 0,
-            e: cleanV(x.text).length
-          });
-        });
-        const ee = off(eEl, range.endContainer, range.endOffset);
-        if (ee > 0) out.push({
-          v: eV,
-          s: 0,
-          e: ee
-        });
-      }
+      });
       pending.current = out;
       setBarOpen(out.length > 0);
     };
@@ -4103,7 +4076,7 @@ function ChapterReader({
       key: k,
       onClick: e => {
         e.stopPropagation();
-        removeId(sg.m.id);
+        if (window.confirm("Remove this highlight?")) removeId(sg.m.id);
       },
       style: {
         background: sg.m.c,
@@ -4222,7 +4195,14 @@ function ChapterReader({
     }
   }, "Highlight"), HL_COLORS.map(c => /*#__PURE__*/React.createElement("div", {
     key: c,
-    onClick: () => apply(c),
+    onMouseDown: e => {
+      e.preventDefault();
+      apply(c);
+    },
+    onTouchStart: e => {
+      e.preventDefault();
+      apply(c);
+    },
     style: {
       width: 34,
       height: 34,
