@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>FocusWord — Hotspot Helper</title>
+<style>
+  :root{ --gold:#e0c074; --bg:#0c0c18; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:var(--bg); color:#ece9f5; font-family:-apple-system,Segoe UI,sans-serif; padding:14px; }
+  h1{ font-size:18px; margin:0 0 4px; }
+  p{ font-size:13px; color:#b9b6c9; line-height:1.5; margin:6px 0; }
+  input,button,textarea{ font-family:inherit; }
+  .row{ display:flex; gap:8px; margin:10px 0; }
+  input[type=text]{ flex:1; padding:10px; border-radius:8px; border:1px solid #444; background:#16162a; color:#fff; font-size:14px; }
+  button{ padding:10px 14px; border-radius:8px; border:1px solid var(--gold); background:#1c1830; color:var(--gold); font-weight:700; font-size:14px; cursor:pointer; }
+  button.alt{ border-color:#555; color:#ddd; background:#15152a; }
+  #stage{ position:relative; width:100%; margin:10px 0; border:1px solid #333; border-radius:10px; overflow:hidden; background:#000; touch-action:manipulation; }
+  #stage img{ display:block; width:100%; }
+  .rect{ position:absolute; border:2px solid var(--gold); background:rgba(224,192,116,.18); box-shadow:0 0 0 1px #000; }
+  .rect span{ position:absolute; top:-9px; left:-1px; background:var(--gold); color:#000; font-size:10px; font-weight:800; padding:1px 5px; border-radius:5px; white-space:nowrap; }
+  .dot{ position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; background:var(--gold); box-shadow:0 0 0 3px rgba(0,0,0,.5); }
+  textarea{ width:100%; height:150px; background:#101022; color:#cfe9c9; border:1px solid #333; border-radius:8px; padding:10px; font-size:12px; font-family:ui-monospace,Menlo,monospace; }
+  .hint{ color:var(--gold); font-weight:700; }
+  ol{ font-size:13px; color:#c7c4d6; padding-left:18px; }
+</style>
+</head>
+<body>
+  <h1>🗺️ Hotspot Helper</h1>
+  <p>Find the percentage coordinates for clickable areas on a learning map, then paste them to Claude.</p>
+  <ol>
+    <li>Put your map image's path or URL below and tap <b>Load</b>.</li>
+    <li>Tap the <span class="hint">top-left</span> corner of an object, then the <span class="hint">bottom-right</span> corner. A box appears.</li>
+    <li>Type a label + chapters when asked.</li>
+    <li>Repeat for each object, then tap <b>Copy</b> and send the box to Claude.</li>
+  </ol>
+
+  <div class="row">
+    <input id="url" type="text" value="images/wall/maps/leviticus.JPG" placeholder="image path or URL" />
+    <button onclick="loadImg()">Load</button>
+  </div>
+
+  <div id="stage"></div>
+
+  <div class="row">
+    <button class="alt" onclick="undo()">Undo last</button>
+    <button class="alt" onclick="reset()">Clear all</button>
+    <button onclick="copyOut()">Copy</button>
+  </div>
+
+  <textarea id="out" readonly placeholder="Your hotspots will appear here…"></textarea>
+
+<script>
+  var stage = document.getElementById('stage');
+  var out = document.getElementById('out');
+  var img = null, first = null, spots = [];
+
+  function loadImg(){
+    var url = document.getElementById('url').value.trim();
+    stage.innerHTML = '';
+    spots = []; first = null; render();
+    img = new Image();
+    img.onload = function(){ stage.appendChild(img); };
+    img.onerror = function(){ stage.innerHTML = '<p style="padding:14px;color:#e79">Could not load that image. Check the path/URL.</p>'; };
+    img.src = url;
+  }
+
+  stage.addEventListener('click', function(e){
+    if(!img || !img.width) return;
+    var r = img.getBoundingClientRect();
+    var x = ((e.clientX - r.left) / r.width) * 100;
+    var y = ((e.clientY - r.top) / r.height) * 100;
+    x = Math.max(0, Math.min(100, x)); y = Math.max(0, Math.min(100, y));
+    if(!first){
+      first = { x:x, y:y };
+      var d = document.createElement('div'); d.className='dot'; d.id='tmpdot';
+      d.style.left = x+'%'; d.style.top = y+'%'; stage.appendChild(d);
+    } else {
+      var hx = Math.min(first.x, x), hy = Math.min(first.y, y);
+      var hw = Math.abs(x - first.x), hh = Math.abs(y - first.y);
+      var label = prompt('Label for this area? (e.g., Offerings & Sacrifices)') || 'Untitled';
+      var chs = prompt('Chapters? e.g.  1-7   or   16') || '';
+      var ch = parseCh(chs);
+      spots.push({ x:round(hx), y:round(hy), w:round(hw), h:round(hh), label:label, ch:ch });
+      first = null;
+      var t = document.getElementById('tmpdot'); if(t) t.remove();
+      render();
+    }
+  });
+
+  function parseCh(s){
+    s = s.replace(/\s/g,'');
+    if(s.indexOf('-')>=0){ var p=s.split('-'); return [num(p[0]), num(p[1])]; }
+    var n = num(s); return [n, n];
+  }
+  function num(v){ var n=parseInt(v,10); return isNaN(n)?1:n; }
+  function round(v){ return Math.round(v*10)/10; }
+
+  function render(){
+    // remove old rects
+    Array.prototype.slice.call(stage.querySelectorAll('.rect')).forEach(function(el){ el.remove(); });
+    spots.forEach(function(s, i){
+      var d = document.createElement('div'); d.className='rect';
+      d.style.left=s.x+'%'; d.style.top=s.y+'%'; d.style.width=s.w+'%'; d.style.height=s.h+'%';
+      var sp = document.createElement('span'); sp.textContent=(i+1)+'. '+s.label; d.appendChild(sp);
+      stage.appendChild(d);
+    });
+    out.value = JSON.stringify(spots, null, 2);
+  }
+  function undo(){ spots.pop(); first=null; var t=document.getElementById('tmpdot'); if(t)t.remove(); render(); }
+  function reset(){ spots=[]; first=null; render(); }
+  function copyOut(){ out.select(); document.execCommand('copy'); alert('Copied! Paste it to Claude.'); }
+
+  loadImg();
+</script>
+</body>
+</html>

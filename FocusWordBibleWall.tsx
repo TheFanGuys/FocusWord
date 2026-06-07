@@ -440,11 +440,101 @@ function navStyle(disabled, ac) {
 }
 
 // The book page: poster again + About + chapter list (and the reader)
+// ---- Visual Learning Maps ----
+const MAP_BASE = "images/wall/maps/";
+// Per book: a map image + clickable hotspots. x/y/w/h are PERCENTAGES of the image,
+// so they stay aligned on any screen. ch is [firstChapter, lastChapter].
+const BOOK_MAPS = {
+  "Leviticus": {
+    file: "leviticus",
+    aspect: "16 / 9",
+    hotspots: [
+      { x: 3,  y: 10, w: 22, h: 30, label: "Offerings & Sacrifices", ch: [1, 7] },
+      { x: 39, y: 3,  w: 24, h: 28, label: "Day of Atonement",       ch: [16, 16] },
+      { x: 69, y: 3,  w: 29, h: 36, label: "Priesthood & Garments",  ch: [8, 10] },
+      { x: 2,  y: 66, w: 23, h: 30, label: "Clean & Unclean",        ch: [11, 15] },
+      { x: 35, y: 36, w: 31, h: 38, label: "Holiness & Tabernacle",  ch: [17, 22] },
+      { x: 79, y: 45, w: 19, h: 32, label: "Feasts, Lamp & Bread",   ch: [23, 25] },
+      { x: 74, y: 72, w: 24, h: 26, label: "Blessings & Vows",       ch: [26, 27] },
+    ],
+  },
+};
+function bookMap(book) { return (book && BOOK_MAPS[book.name]) || null; }
+function chList(ch) { const out = []; for (let c = ch[0]; c <= ch[1]; c++) out.push(c); return out; }
+function mapCandidates(file) {
+  return ["JPG", "jpg", "jpeg", "png", "PNG", "webp"].map((e) => `${MAP_BASE}${file}.${e}`);
+}
+
+// Full visual map: tap a glowing point -> floating card of that section's chapters
+function MapView({ book, map, ac, onChapter, onList }) {
+  const [spot, setSpot] = useState(null);
+  const [i, setI] = useState(0);
+  const [ok, setOk] = useState(false);
+  const cands = mapCandidates(map.file);
+  const src = i < cands.length ? cands[i] : null;
+  return (
+    <div style={{ maxWidth: 860, margin: "0 auto", padding: "4px 12px 90px" }}>
+      <style>{`@keyframes fwpulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.95}50%{transform:translate(-50%,-50%) scale(1.45);opacity:.55}}`}</style>
+      <div style={{ textAlign: "center", margin: "2px 0 10px" }}>
+        <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "Georgia, serif" }}>{book.name}</div>
+        <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Tap a glowing point to explore</div>
+      </div>
+
+      <div style={{ position: "relative", width: "100%", aspectRatio: map.aspect, borderRadius: 12, overflow: "hidden",
+        border: `1px solid ${ac}44`, background: "#06060f", boxShadow: "0 12px 44px rgba(0,0,0,0.6)" }}>
+        {src && <img src={src} alt={`${book.name} map`} onLoad={() => setOk(true)} onError={() => setI(i + 1)}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill",
+            opacity: ok ? 1 : 0, transition: "opacity .4s ease" }} />}
+        {!ok && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#9a93b5", fontSize: 13 }}>Loading map&hellip;</div>}
+        {ok && map.hotspots.map((h, idx) => (
+          <button key={idx} onClick={() => setSpot(h)} aria-label={h.label}
+            style={{ position: "absolute", left: `${h.x}%`, top: `${h.y}%`, width: `${h.w}%`, height: `${h.h}%`,
+              background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>
+            <span style={{ position: "absolute", left: "50%", top: "50%",
+              width: 14, height: 14, borderRadius: "50%", background: "#ffe6a6",
+              boxShadow: `0 0 0 4px ${ac}33, 0 0 16px 4px ${ac}cc`, animation: "fwpulse 1.9s ease-in-out infinite" }} />
+          </button>
+        ))}
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: 16 }}>
+        <button onClick={onList} style={{ ...navStyle(false, ac), flex: "none", display: "inline-block", padding: "11px 20px" }}>
+          All chapters &amp; about
+        </button>
+      </div>
+
+      {spot && (
+        <div onClick={() => setSpot(null)} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(3,3,9,0.62)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 360,
+            background: "linear-gradient(180deg, #16172f, #0c0c1c)", border: `1px solid ${ac}66`, borderRadius: 16,
+            padding: "16px 16px 18px", boxShadow: "0 18px 55px rgba(0,0,0,0.7)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>{spot.label}</div>
+              <button onClick={() => setSpot(null)} style={{ ...detailBackBtn, width: 30, height: 30, fontSize: 20 }} aria-label="Close">&times;</button>
+            </div>
+            <div style={{ fontSize: 11, letterSpacing: 2, opacity: 0.55, textTransform: "uppercase", marginBottom: 9 }}>Chapters &middot; tap to read</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(52px, 1fr))", gap: 8 }}>
+              {chList(spot.ch).map((c) => (
+                <button key={c} onClick={() => { setSpot(null); onChapter(c); }}
+                  style={{ padding: "12px 0", borderRadius: 9, cursor: "pointer", background: "rgba(255,255,255,0.05)",
+                    color: "#efe9da", border: `1px solid ${ac}44`, fontSize: 15, fontWeight: 700 }}>{c}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BookDetail({ book, onClose }) {
   const [chapter, setChapter] = useState(null);
   const [imgOk, setImgOk] = useState(false);
   const ac = accent(book.testament);
   const n = book.chapters || 1;
+  const map = bookMap(book);
+  const [mode, setMode] = useState(map ? "map" : "list");
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60, overflowY: "scroll", WebkitOverflowScrolling: "touch",
@@ -463,6 +553,10 @@ function BookDetail({ book, onClose }) {
 
       {chapter ? (
         <ChapterReader book={book} chapter={chapter} total={n} setChapter={setChapter} ac={ac} />
+      ) : (mode === "map" && map) ? (
+        <MapView book={book} map={map} ac={ac}
+          onChapter={(c) => { setChapter(c); window.scrollTo(0, 0); }}
+          onList={() => setMode("list")} />
       ) : (
         <div style={{ maxWidth: 760, margin: "0 auto", padding: "4px 18px 70px" }}>
           <div style={{ position: "relative", width: "100%", maxWidth: 330, margin: "6px auto 18px",
@@ -478,6 +572,14 @@ function BookDetail({ book, onClose }) {
               {book.testament === "OT" ? "Old Testament" : "New Testament"} &middot; {book.category}
             </div>
           </div>
+
+          {map && (
+            <div style={{ textAlign: "center", margin: "2px 0 8px" }}>
+              <button onClick={() => setMode("map")} style={{ ...navStyle(false, ac), flex: "none", display: "inline-block", padding: "11px 20px" }}>
+                &#10022; Open the visual map
+              </button>
+            </div>
+          )}
 
           <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
             borderRadius: 12, padding: "14px 16px", margin: "16px 0 22px", lineHeight: 1.6, fontSize: 15.5 }}>
