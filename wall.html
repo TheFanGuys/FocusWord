@@ -3516,6 +3516,9 @@ function FocusWordBibleWall() {
   const [focusedCol, setFocusedCol] = useState(0);
   const [active, setActive] = useState(OT[0]);
   const [openBook, setOpenBook] = useState(null);
+  useEffect(() => {
+    openRef.current = !!openBook;
+  }, [openBook]);
   const pos = useRef(0); // current position (float book column)
   const vel = useRef(0); // velocity in columns per frame
   const dragging = useRef(false);
@@ -3526,6 +3529,7 @@ function FocusWordBibleWall() {
   const lastT = useRef(0);
   const lastCol = useRef(0);
   const pinned = useRef(false);
+  const openRef = useRef(false); // true while a book page is open (pause wall gestures)
   const mainRef = useRef(null);
   const stripRef = useRef(null);
   const reflRef = useRef(null);
@@ -3638,18 +3642,29 @@ function FocusWordBibleWall() {
       dragging.current = false;
     };
     const onWheel = e => {
+      if (openRef.current) return;
       e.preventDefault();
       pinned.current = false;
       snapTo.current = null;
       vel.current = clampV(vel.current + e.deltaY * WHEEL_IMPULSE);
     };
-    const ts = e => begin(e.touches[0].clientX, e.touches[0].clientY);
+    const ts = e => {
+      if (openRef.current) return;
+      begin(e.touches[0].clientX, e.touches[0].clientY);
+    };
     const tm = e => {
+      if (openRef.current) return;
       e.preventDefault();
       move(e.touches[0].clientX, e.touches[0].clientY);
     };
-    const md = e => begin(e.clientX, e.clientY);
-    const mm = e => move(e.clientX, e.clientY);
+    const md = e => {
+      if (openRef.current) return;
+      begin(e.clientX, e.clientY);
+    };
+    const mm = e => {
+      if (openRef.current) return;
+      move(e.clientX, e.clientY);
+    };
     el.addEventListener("wheel", onWheel, {
       passive: false
     });
@@ -3677,6 +3692,7 @@ function FocusWordBibleWall() {
   }, []);
   useEffect(() => {
     const onKey = e => {
+      if (openRef.current) return;
       if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         pinned.current = false;
         vel.current = 0;
