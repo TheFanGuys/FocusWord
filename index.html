@@ -81,10 +81,11 @@ body{
 
 /* ============ TOP BAR ============ */
 .topbar{
-  display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:calc(16px + env(safe-area-inset-top)) 18px 12px;
   position:sticky;top:0;z-index:20;
-  background:linear-gradient(to bottom,var(--bg) 60%,transparent);
-  backdrop-filter:blur(4px);
+  background:linear-gradient(to bottom,var(--bg) 70%,transparent);
+  backdrop-filter:blur(8px);
 }
 .topbar h1{font-size:21px;font-weight:700;letter-spacing:-0.01em;display:flex;align-items:center;gap:9px;}
 .topbar h1 .logo{
@@ -193,7 +194,81 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
   transition:.3s;pointer-events:none;max-width:90%;text-align:center;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
-/* Reading typography (ADHD-optimized) */
+/* ============ FOCUSWORD BIBLE WALL ============ */
+#screen-wall{display:none;flex-direction:column;overflow:hidden;padding-bottom:0;}
+#screen-wall.active{display:flex;}
+.wall-search-btn{position:absolute;right:14px;top:calc(14px + env(safe-area-inset-top));z-index:25;}
+/* Focus card on top */
+.wall-focus{
+  flex-shrink:0; padding:14px 16px 12px; position:relative;
+  background:linear-gradient(180deg,var(--surface),transparent);
+  border-bottom:1px solid var(--border);
+}
+.wall-focus .fc-top{display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.wall-focus .fc-num{
+  font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.15em;
+  background:rgba(232,184,75,0.12);padding:4px 10px;border-radius:20px;border:1px solid rgba(232,184,75,0.4);
+}
+.wall-focus .fc-cat{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
+.wall-focus .fc-name{font-size:28px;font-weight:800;line-height:1.05;margin-bottom:4px;letter-spacing:-0.01em;}
+.wall-focus .fc-memory{font-size:14px;font-weight:600;font-style:italic;color:var(--gold);margin-bottom:8px;}
+.wall-focus .fc-sum{font-size:14px;line-height:1.6;color:var(--text-dim);margin-bottom:12px;}
+.wall-focus .fc-actions{display:flex;gap:8px;}
+.wall-focus.ot{box-shadow:inset 0 -2px 30px rgba(155,47,176,0.18);}
+.wall-focus.nt{box-shadow:inset 0 -2px 30px rgba(19,163,204,0.18);}
+.wall-focus .fc-icon{
+  flex-shrink:0;width:54px;height:54px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,rgba(232,184,75,0.25),transparent 70%);
+}
+/* Scrollable 3D wall */
+.wall-stage{
+  flex:1; overflow:hidden; position:relative;
+  perspective:900px; perspective-origin:50% 50%;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(113,2,128,0.12), transparent 60%),
+    var(--bg);
+}
+.wall-track{
+  position:absolute; left:0; top:50%; width:100%; height:0;
+  transform-style:preserve-3d; will-change:transform;
+  touch-action:pan-y;
+}
+.wall-panel{
+  position:absolute; left:50%; top:0;
+  width:78%; max-width:340px; height:90px;
+  transform-origin:center center;
+  will-change:transform,opacity,filter;
+  cursor:pointer; user-select:none;
+  border-radius:14px; padding:12px 14px;
+  display:flex; align-items:center; gap:12px;
+  transition:box-shadow .25s;
+}
+.wall-panel.ot{
+  background:linear-gradient(135deg, rgba(26,9,37,0.92), rgba(13,6,23,0.92));
+  border:1px solid rgba(155,47,176,0.55);
+  box-shadow:0 0 24px rgba(155,47,176,0.35), inset 0 0 18px rgba(155,47,176,0.18);
+}
+.wall-panel.nt{
+  background:linear-gradient(135deg, rgba(6,37,53,0.92), rgba(3,22,34,0.92));
+  border:1px solid rgba(19,163,204,0.55);
+  box-shadow:0 0 24px rgba(19,163,204,0.35), inset 0 0 18px rgba(19,163,204,0.18);
+}
+.wall-panel .wp-num{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.12em;opacity:.8;}
+.wall-panel .wp-name{font-size:15px;font-weight:700;color:#fff;line-height:1.1;margin:1px 0 2px;}
+.wall-panel .wp-memo{font-size:11px;color:rgba(255,255,255,0.6);line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;}
+.wall-panel .wp-icon{
+  flex-shrink:0;width:42px;height:42px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%, rgba(232,184,75,0.2), transparent 70%);
+}
+.wall-panel .wp-body{flex:1;min-width:0;}
+.wall-hint{
+  position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+  font-size:11px;color:var(--text-faint);text-align:center;
+  background:rgba(0,0,0,0.5);padding:6px 14px;border-radius:20px;
+  pointer-events:none;backdrop-filter:blur(4px);
+}
 .vtext{line-height:1.9;letter-spacing:0.03em;font-weight:300;}
 .vtext b{font-weight:700;color:var(--text);}
 .phrase{display:block;margin-bottom:7px;padding-left:2px;}
@@ -303,7 +378,7 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
         <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('pray')" data-ic="pray"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Journal</div></div>
         <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('canvas')" data-ic="canvas"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Canvas</div></div>
         <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="openAI()" data-ic="ai"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">AI Study</div></div>
-        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('bigpicture')" data-ic="map"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Big Picture</div></div>
+        <div class="card tap qa" style="text-align:center;margin-bottom:0;" onclick="go('wall')" data-ic="explore"><div class="qa-ic"></div><div style="font-weight:600;margin-top:6px;">Explore</div></div>
       </div>
     </div>
   </div>
@@ -390,6 +465,18 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
     </div>
     <div class="pad" id="subContent"></div>
   </div>
+
+<!-- ============ FOCUSWORD BIBLE WALL ============ -->
+  <div class="screen" id="screen-wall">
+    <div class="topbar">
+      <button class="iconbtn" onclick="go('home')" data-ic="back"></button>
+      <h1 style="font-size:18px;">📖 Bible Wall</h1>
+      <div style="width:42px;"></div>
+    </div>
+    <iframe id="wallFrame" title="Bible Wall" style="flex:1 1 auto;min-height:0;width:100%;border:0;display:block;background:#05040a;"></iframe>
+  </div>
+
+
 
   <!-- ============ TAB BAR ============ -->
   <nav class="tabbar">
@@ -556,13 +643,17 @@ function go(tab){
     if(tab==='canvas') initCanvas();
     if(tab==='more') renderMore();
     if(tab==='home') renderHome();
+  } else if(tab==='wall'){
+    document.getElementById('screen-wall').classList.add('active');
+    document.querySelector('.tab[data-tab="home"]').classList.add('active');
+    var wf=document.getElementById('wallFrame'); if(wf && !wf.src) wf.src='wall.html';
   } else {
     // sub screen
     document.getElementById('screen-sub').classList.add('active');
     document.querySelector('.tab[data-tab="more"]').classList.add('active');
     renderSub(tab);
   }
-  document.querySelector('.screen.active').scrollTop=0;
+  const act=document.querySelector('.screen.active'); if(act) act.scrollTop=0;
 }
 
 /* ============ STREAK LOGIC ============ */
@@ -615,7 +706,8 @@ data:'<ellipse cx="12" cy="6" rx="7" ry="2.8"/><path d="M5 6v12c0 1.5 3 2.8 7 2.
 share:'<circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="6" r="2.5"/><circle cx="17.5" cy="18" r="2.5"/><path d="M8.7 10.8l6.6-3.6M8.7 13.2l6.6 3.6"/>',
 arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
 heart:'<path d="M12 20s-7-4.3-7-9.2A4 4 0 0 1 12 7a4 4 0 0 1 7 3.8C19 15.7 12 20 12 20Z"/>',
-map:'<rect x="3.5" y="5" width="7" height="6" rx="1"/><rect x="13.5" y="5" width="7" height="6" rx="1"/><rect x="3.5" y="14" width="7" height="5" rx="1"/><rect x="13.5" y="14" width="7" height="5" rx="1"/>'
+map:'<rect x="3.5" y="5" width="7" height="6" rx="1"/><rect x="13.5" y="5" width="7" height="6" rx="1"/><rect x="3.5" y="14" width="7" height="5" rx="1"/><rect x="13.5" y="14" width="7" height="5" rx="1"/>',
+explore:'<circle cx="12" cy="12" r="9"/><path d="M16 8l-3 5-5 3 3-5 5-3Z"/>'
 };
 function ICON(name,size){
   const s=size||24;
@@ -792,6 +884,645 @@ const BIBLE_MAP=[
   {t:'The Letters',sub:'How to actually follow Jesus',c:'#710280',n:'21 books',line:'Real mail to real people and churches — practical faith for daily life.',books:['Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude']},
   {t:'Prophecy',sub:'Where it\'s all going',c:'#5a1a6e',n:'1 book',line:'How the story ends — and the hope of everything made new. (Revelation.)',books:['Revelation']}
 ];
+
+/* =============================================================
+   BIBLE EXPLORER  —  all 66 books, each with:
+   - i: unique SVG icon (single-path memory hook)
+   - c: category key (color + grouping)
+   - l: one-line plain-English tagline
+   - sum: 2-3 sentence summary
+   - t: 2-3 themes
+   - k: 3-5 key passages
+   - who: notable people
+   - when: rough era
+   - where: setting
+   ============================================================= */
+const BOOK_CATS = {
+  law:       {name:'Law',          color:'#e8b84b'},
+  history:   {name:'History',      color:'#c8923a'},
+  wisdom:    {name:'Wisdom',       color:'#13a3cc'},
+  prophets:  {name:'Prophets',     color:'#0d8b9c'},
+  gospels:   {name:'Gospel',       color:'#9b2fb0'},
+  acts:      {name:'Church Hist.', color:'#7a2a9b'},
+  letters:   {name:'Letter',       color:'#710280'},
+  revelation:{name:'Prophecy',     color:'#5a1a6e'}
+};
+const EXPLORER = {
+/* ========== OLD TESTAMENT — LAW ========== */
+"Genesis":{cat:'law',
+  i:'<circle cx="12" cy="13" r="7"/><path d="M12 6V3M9 4l1 2M15 4l-1 2"/>',
+  l:'How it all began.',
+  sum:'God creates everything — sky, earth, life, people — and it is good. Sin enters and breaks things, but God begins the rescue plan through Abraham\'s family.',
+  t:['Creation','Promise','Family'],
+  k:['Genesis 1','Genesis 3','Genesis 12','Genesis 22','Genesis 50:20'],
+  who:'Adam, Eve, Noah, Abraham, Sarah, Isaac, Jacob, Joseph',
+  when:'The beginning — c. 2000 BC for Abraham',
+  where:'Eden, Mesopotamia, Canaan, Egypt'},
+"Exodus":{cat:'law',
+  i:'<path d="M5 4v16h7V4Z"/><path d="M16 8l4 4-4 4M20 12h-8"/>',
+  l:'God rescues His people from slavery.',
+  sum:'God hears Israel\'s cries in Egypt, raises up Moses, sends ten plagues, parts the sea, and gives the Ten Commandments at Sinai. The pattern of God-as-rescuer.',
+  t:['Rescue','Law','Presence'],
+  k:['Exodus 3','Exodus 12','Exodus 14','Exodus 20','Exodus 33:14'],
+  who:'Moses, Aaron, Miriam, Pharaoh',
+  when:'c. 1450 BC',
+  where:'Egypt, the Red Sea, Mt. Sinai'},
+"Leviticus":{cat:'law',
+  i:'<path d="M12 4l-3 5h6Z"/><rect x="6" y="9" width="12" height="3"/><path d="M9 12v8M15 12v8M6 20h12"/>',
+  l:'How to live near a holy God.',
+  sum:'A handbook for the priests and people: sacrifices, festivals, and clean living. The takeaway: holiness matters, and God provides a way to come close.',
+  t:['Holiness','Sacrifice','Atonement'],
+  k:['Leviticus 11:44','Leviticus 16','Leviticus 19:18','Leviticus 26'],
+  who:'Moses, Aaron, the priests',
+  when:'c. 1450 BC',
+  where:'At Mt. Sinai'},
+"Numbers":{cat:'law',
+  i:'<path d="M5 6h14M5 12h14M5 18h14"/><circle cx="8" cy="6" r="1.3"/><circle cx="14" cy="12" r="1.3"/><circle cx="10" cy="18" r="1.3"/>',
+  l:'40 years of wandering.',
+  sum:'Israel is counted, complains, doesn\'t trust God at the border of the Promised Land, and spends a generation wandering. A cautionary tale about unbelief.',
+  t:['Wilderness','Faithfulness','Grumbling'],
+  k:['Numbers 6:24-26','Numbers 13','Numbers 14','Numbers 21:4-9'],
+  who:'Moses, Aaron, Joshua, Caleb',
+  when:'c. 1450-1410 BC',
+  where:'The wilderness, between Egypt and Canaan'},
+"Deuteronomy":{cat:'law',
+  i:'<rect x="6" y="4" width="12" height="16" rx="1.5"/><path d="M9 9h6M9 12h6M9 15h4"/>',
+  l:'Remember everything God taught you.',
+  sum:'Moses\' farewell speeches. He retells the journey and re-gives the law before the new generation enters the Promised Land. "Love the Lord with all your heart."',
+  t:['Remember','Love','Choose Life'],
+  k:['Deuteronomy 6:4-9','Deuteronomy 8','Deuteronomy 30:19','Deuteronomy 31:6'],
+  who:'Moses (final words), Joshua',
+  when:'c. 1410 BC',
+  where:'Plains of Moab, east of the Jordan'},
+
+/* ========== OLD TESTAMENT — HISTORY ========== */
+"Joshua":{cat:'history',
+  i:'<path d="M9 4v12l3 3 3-3V4"/><path d="M9 8h6"/>',
+  l:'Taking the Promised Land.',
+  sum:'Joshua leads Israel across the Jordan and into Canaan. Walls fall at Jericho. The land is divided among the tribes. "Be strong and courageous."',
+  t:['Courage','Conquest','Faithfulness'],
+  k:['Joshua 1:9','Joshua 6','Joshua 24:15'],
+  who:'Joshua, Rahab, Caleb',
+  when:'c. 1400 BC',
+  where:'Canaan'},
+"Judges":{cat:'history',
+  i:'<path d="M12 4v6M8 10h8M9 10l1 10M15 10l-1 10"/>',
+  l:'On repeat: rebellion, rescue, repeat.',
+  sum:'Without a king, Israel keeps falling away. God raises up rescuers (judges) to save them. A dark spiral that shows the need for a true King.',
+  t:['Cycles','Rescue','Need for a King'],
+  k:['Judges 2:11-19','Judges 6','Judges 16','Judges 21:25'],
+  who:'Deborah, Gideon, Samson',
+  when:'c. 1380-1050 BC',
+  where:'Throughout the Promised Land'},
+"Ruth":{cat:'history',
+  i:'<path d="M7 18l3-8 2 5 2-3 3 6"/><circle cx="12" cy="6" r="2"/>',
+  l:'Loyalty and love in dark times.',
+  sum:'A foreign widow named Ruth stays loyal to her mother-in-law and finds redemption through Boaz. She becomes the great-grandmother of King David.',
+  t:['Loyalty','Redemption','God\'s providence'],
+  k:['Ruth 1:16','Ruth 2:12','Ruth 4:13-17'],
+  who:'Ruth, Naomi, Boaz',
+  when:'c. 1100 BC',
+  where:'Moab and Bethlehem'},
+"1 Samuel":{cat:'history',
+  i:'<circle cx="12" cy="8" r="3"/><path d="M9 11v9M15 11v9M9 14h6"/>',
+  l:'Israel gets a king (and a better king).',
+  sum:'Samuel anoints Saul, then anoints David. David rises, defeats Goliath, and is hunted by jealous Saul. God looks at the heart, not appearance.',
+  t:['Kingship','Heart vs. appearance','Anointing'],
+  k:['1 Samuel 3','1 Samuel 16:7','1 Samuel 17'],
+  who:'Samuel, Saul, David, Jonathan',
+  when:'c. 1050-1010 BC',
+  where:'Israel'},
+"2 Samuel":{cat:'history',
+  i:'<path d="M6 18l6-12 6 12Z"/><circle cx="12" cy="14" r="1.5" fill="currentColor"/>',
+  l:'David\'s rise, fall, and recovery.',
+  sum:'David becomes king, unites Israel, and reigns gloriously. Then he stumbles into great sin with Bathsheba. Restoration, but lasting consequences.',
+  t:['Kingship','Sin & repentance','Covenant'],
+  k:['2 Samuel 7','2 Samuel 11-12','2 Samuel 22'],
+  who:'David, Bathsheba, Nathan, Absalom',
+  when:'c. 1010-970 BC',
+  where:'Jerusalem'},
+"1 Kings":{cat:'history',
+  i:'<path d="M5 18V8l3 3 4-7 4 7 3-3v10Z"/>',
+  l:'Wisdom, glory, and a kingdom splits.',
+  sum:'Solomon builds the temple and rules wisely — until idolatry creeps in. After he dies, the kingdom splits in two: Israel (north) and Judah (south).',
+  t:['Wisdom','Temple','Division'],
+  k:['1 Kings 3','1 Kings 8','1 Kings 18','1 Kings 19:11-13'],
+  who:'Solomon, Elijah, Ahab, Jezebel',
+  when:'c. 970-850 BC',
+  where:'Jerusalem and beyond'},
+"2 Kings":{cat:'history',
+  i:'<path d="M5 18V8l3 3 4-7 4 7 3-3v10Z"/><path d="M9 18v-3M15 18v-3" stroke-width="2.5"/>',
+  l:'Both kingdoms fall.',
+  sum:'The prophets warn for centuries. Israel falls to Assyria (722 BC). Judah falls to Babylon (586 BC). The temple burns. Exile begins.',
+  t:['Warning','Judgment','Exile'],
+  k:['2 Kings 17','2 Kings 22-23','2 Kings 25'],
+  who:'Elisha, Hezekiah, Josiah',
+  when:'c. 850-586 BC',
+  where:'Israel, Judah, Babylon'},
+"1 Chronicles":{cat:'history',
+  i:'<path d="M5 5v14M9 5v14M13 5v14M17 5v14"/><path d="M5 9h12M5 14h12"/>',
+  l:'David\'s story, retold for the exiles.',
+  sum:'A retelling of David\'s reign, focused on worship and the temple. Written to encourage Jews returning from exile: "You are still God\'s people."',
+  t:['Identity','Worship','God\'s faithfulness'],
+  k:['1 Chronicles 16','1 Chronicles 17','1 Chronicles 29'],
+  who:'David, Solomon',
+  when:'Written c. 450 BC',
+  where:'Looking back at Jerusalem'},
+"2 Chronicles":{cat:'history',
+  i:'<rect x="6" y="6" width="12" height="14"/><path d="M6 10h12M10 6V4M14 6V4"/>',
+  l:'Solomon\'s temple, then ruin and rebuild.',
+  sum:'Continues the retelling, focused on Judah\'s kings and the temple. Ends with the hope of return after exile. Encouragement for a rebuilding people.',
+  t:['Temple','Faithfulness','Return'],
+  k:['2 Chronicles 7:14','2 Chronicles 20','2 Chronicles 36'],
+  who:'Solomon, Jehoshaphat, Hezekiah, Josiah',
+  when:'Written c. 450 BC',
+  where:'Judah'},
+"Ezra":{cat:'history',
+  i:'<path d="M6 18V10l6-5 6 5v8"/><path d="M10 18v-5h4v5"/>',
+  l:'Coming home, rebuilding the temple.',
+  sum:'After 70 years of exile, Jews return to Jerusalem and rebuild the temple. Ezra later returns to teach God\'s law and call the people to renewal.',
+  t:['Return','Rebuilding','Renewal'],
+  k:['Ezra 1','Ezra 3','Ezra 9-10'],
+  who:'Ezra, Zerubbabel',
+  when:'c. 538-440 BC',
+  where:'Jerusalem'},
+"Nehemiah":{cat:'history',
+  i:'<path d="M4 18V10M20 18V10M4 14h16"/><rect x="7" y="6" width="3" height="4"/><rect x="14" y="6" width="3" height="4"/>',
+  l:'Rebuilding the walls, against all odds.',
+  sum:'Nehemiah leads the rebuilding of Jerusalem\'s walls in just 52 days despite fierce opposition. Practical leadership and prayer woven together.',
+  t:['Leadership','Prayer','Perseverance'],
+  k:['Nehemiah 1','Nehemiah 4','Nehemiah 6:15-16','Nehemiah 8'],
+  who:'Nehemiah, Ezra',
+  when:'c. 445 BC',
+  where:'Jerusalem'},
+"Esther":{cat:'history',
+  i:'<path d="M12 4l2 5h5l-4 3 1.5 5L12 14l-4.5 3L9 12 5 9h5Z"/>',
+  l:'"For such a time as this."',
+  sum:'A young Jewish woman becomes queen of Persia and risks her life to save her people from genocide. God\'s name never appears, but His hand is everywhere.',
+  t:['Providence','Courage','Hidden God'],
+  k:['Esther 4:14','Esther 7','Esther 9'],
+  who:'Esther, Mordecai, Haman, Xerxes',
+  when:'c. 480 BC',
+  where:'Persia'},
+
+/* ========== OLD TESTAMENT — WISDOM & POETRY ========== */
+"Job":{cat:'wisdom',
+  i:'<circle cx="12" cy="8" r="3"/><path d="M12 11v9M8 14h8"/><path d="M5 5l2 2M19 5l-2 2"/>',
+  l:'Why do good people suffer?',
+  sum:'A righteous man loses everything. His friends give bad answers. God finally speaks — not explaining suffering, but revealing Himself. Job\'s faith deepens.',
+  t:['Suffering','Faith in the dark','God\'s mystery'],
+  k:['Job 1:21','Job 19:25','Job 38','Job 42'],
+  who:'Job, his friends, God',
+  when:'Possibly the oldest book — patriarchal era',
+  where:'Uz (uncertain location)'},
+"Psalms":{cat:'wisdom',
+  i:'<path d="M8 5v12a3 3 0 1 1-3-3"/><path d="M8 5l8-1v12a3 3 0 1 1-3-3"/>',
+  l:'The Bible\'s prayer & song book.',
+  sum:'150 raw, honest prayers and songs — joy, anger, lament, praise. The full range of human emotion brought to God. The heart of the Bible\'s worship.',
+  t:['Honest prayer','Worship','Trust'],
+  k:['Psalm 23','Psalm 51','Psalm 91','Psalm 119','Psalm 139'],
+  who:'David (mostly), Asaph, Solomon, others',
+  when:'c. 1000-450 BC',
+  where:'Israel'},
+"Proverbs":{cat:'wisdom',
+  i:'<path d="M12 4v16"/><path d="M7 8l5-4 5 4M7 14l5-4 5 4M7 20l5-4 5 4"/>',
+  l:'Wisdom for everyday life.',
+  sum:'Short sayings on money, words, work, sex, friendship, parenting. Practical wisdom that begins with "the fear of the Lord."',
+  t:['Wisdom','Daily life','Fear of God'],
+  k:['Proverbs 3:5-6','Proverbs 9:10','Proverbs 22:6','Proverbs 31'],
+  who:'Solomon (mainly), wise teachers',
+  when:'c. 970-700 BC',
+  where:'Israel'},
+"Ecclesiastes":{cat:'wisdom',
+  i:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+  l:'What\'s the point of all this?',
+  sum:'A jaded wise man examines life "under the sun" and finds it vapor. Money, pleasure, wisdom — all fleeting. The answer: fear God and enjoy His gifts.',
+  t:['Meaning','Time','Enjoyment'],
+  k:['Ecclesiastes 3:1-8','Ecclesiastes 3:11','Ecclesiastes 12:13'],
+  who:'"The Teacher" (likely Solomon)',
+  when:'c. 935 BC',
+  where:'Jerusalem'},
+"Song of Solomon":{cat:'wisdom',
+  i:'<path d="M12 19s-7-4.3-7-9.2A4 4 0 0 1 12 7a4 4 0 0 1 7 2.8C19 14.7 12 19 12 19Z"/>',
+  l:'A love song.',
+  sum:'A passionate, poetic celebration of married love. Often read as a picture of God\'s love for His people. Beautiful, intimate, sometimes startling.',
+  t:['Love','Desire','Covenant'],
+  k:['Song of Solomon 2:10-13','Song of Solomon 8:6-7'],
+  who:'A bride and her beloved',
+  when:'c. 960 BC',
+  where:'Israel'},
+
+/* ========== OLD TESTAMENT — MAJOR PROPHETS ========== */
+"Isaiah":{cat:'prophets',
+  i:'<path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/><circle cx="12" cy="12" r="3"/>',
+  l:'A coming Servant who will save.',
+  sum:'Warnings of judgment mixed with stunning promises of a Messiah. Foretells a suffering Servant who carries our sins. The most-quoted prophet in the NT.',
+  t:['Holiness','Judgment','The Servant'],
+  k:['Isaiah 6','Isaiah 9:6-7','Isaiah 40','Isaiah 53','Isaiah 61'],
+  who:'Isaiah, kings of Judah',
+  when:'c. 740-690 BC',
+  where:'Judah'},
+"Jeremiah":{cat:'prophets',
+  i:'<path d="M9 4v8a3 3 0 0 1-3 3 3 3 0 0 1 3 3v2M15 4v8a3 3 0 0 0 3 3 3 3 0 0 0-3 3v2"/>',
+  l:'The weeping prophet.',
+  sum:'For 40 years Jeremiah warns Judah of coming exile. They ignore him, mock him, jail him. He weeps, but keeps preaching. God\'s "new covenant" promised here.',
+  t:['Judgment','Lament','New Covenant'],
+  k:['Jeremiah 1:5','Jeremiah 29:11','Jeremiah 31:31-34'],
+  who:'Jeremiah, Baruch',
+  when:'c. 627-585 BC',
+  where:'Judah'},
+"Lamentations":{cat:'prophets',
+  i:'<path d="M8 4v10c0 2 2 3 4 3s4-1 4-3V4"/><path d="M8 14c0 0 -2 4 0 6M16 14c0 0 2 4 0 6"/>',
+  l:'Funeral songs for Jerusalem.',
+  sum:'Five poems grieving the destruction of Jerusalem. Real, raw lament — and the famous flicker of hope: "His mercies are new every morning."',
+  t:['Grief','Lament','Mercy'],
+  k:['Lamentations 3:21-23','Lamentations 3:22-24'],
+  who:'Jeremiah (traditionally)',
+  when:'c. 586 BC',
+  where:'Fallen Jerusalem'},
+"Ezekiel":{cat:'prophets',
+  i:'<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/><path d="M5 12l-2-2M19 12l2-2M12 5l-2-2M12 19l-2 2"/>',
+  l:'Wild visions and dry bones live.',
+  sum:'Ezekiel\'s strange visions among exiles in Babylon: wheels in the sky, dry bones rising, a future temple. God is still on His throne, and will restore His people.',
+  t:['Vision','Glory','Restoration'],
+  k:['Ezekiel 1','Ezekiel 36:26-27','Ezekiel 37'],
+  who:'Ezekiel, the exiles',
+  when:'c. 593-571 BC',
+  where:'Babylon'},
+"Daniel":{cat:'prophets',
+  i:'<path d="M8 4v6c0 2 -2 3 -2 6s2 4 4 4 4-1 4-3"/><circle cx="16" cy="8" r="2"/><circle cx="16" cy="16" r="2"/>',
+  l:'Faithful under pressure, dreams of kingdoms.',
+  sum:'A young Jewish exile rises in Babylon while staying loyal to God. Lion\'s den. Fiery furnace. And visions of kingdoms rising and falling until God\'s kingdom comes.',
+  t:['Faithfulness','Sovereignty','Kingdom'],
+  k:['Daniel 1','Daniel 3','Daniel 6','Daniel 7'],
+  who:'Daniel, Shadrach, Meshach, Abednego',
+  when:'c. 605-535 BC',
+  where:'Babylon'},
+
+/* ========== OLD TESTAMENT — MINOR PROPHETS ========== */
+"Hosea":{cat:'prophets',
+  i:'<path d="M8 14l4 4 4-4M8 10l4-4 4 4"/><circle cx="12" cy="12" r="1.5"/>',
+  l:'God\'s relentless, scandalous love.',
+  sum:'God tells Hosea to marry an unfaithful woman as a living picture of Israel\'s unfaithfulness — and God\'s refusal to give up on them.',
+  t:['Faithful love','Repentance','Pursuit'],
+  k:['Hosea 1','Hosea 6:1-3','Hosea 14'],
+  who:'Hosea, Gomer',
+  when:'c. 750-715 BC',
+  where:'Northern Israel'},
+"Joel":{cat:'prophets',
+  i:'<path d="M5 18c0-3 2-5 4-5s2 3 5 3 4-2 5-2"/><path d="M5 12c0-3 2-5 4-5s2 3 5 3 4-2 5-2"/>',
+  l:'Locusts, judgment, and pour-out of the Spirit.',
+  sum:'A devastating locust plague becomes a picture of God\'s coming day. But also a promise: God will pour out His Spirit on all people. (Quoted at Pentecost.)',
+  t:['Day of the Lord','Spirit','Restoration'],
+  k:['Joel 2:12-13','Joel 2:28-32'],
+  who:'Joel',
+  when:'Uncertain — possibly c. 835 BC',
+  where:'Judah'},
+"Amos":{cat:'prophets',
+  i:'<path d="M5 19l3-12 3 8 2-5 3 9M15 14h5"/>',
+  l:'Justice rolling like a river.',
+  sum:'A shepherd-turned-prophet calls out Israel\'s religious show while the poor are crushed. "Let justice roll on like a river."',
+  t:['Justice','Hypocrisy','Care for the poor'],
+  k:['Amos 5:21-24'],
+  who:'Amos',
+  when:'c. 760 BC',
+  where:'Northern Israel'},
+"Obadiah":{cat:'prophets',
+  i:'<path d="M5 18l7-13 7 13Z"/><path d="M8 18v-4M16 18v-4"/>',
+  l:'A word against pride.',
+  sum:'The shortest OT book. A warning against Edom for gloating over Israel\'s fall. God humbles the proud.',
+  t:['Pride','Justice'],
+  k:['Obadiah 1:15'],
+  who:'Obadiah',
+  when:'c. 586 BC',
+  where:'Edom and Judah'},
+"Jonah":{cat:'prophets',
+  i:'<path d="M3 14c2-3 6-3 8 0s6 3 8 0"/><circle cx="9" cy="11" r="1.2"/><path d="M15 11s1 -3 4-3"/>',
+  l:'The reluctant missionary.',
+  sum:'God sends Jonah to preach to enemies in Nineveh. He runs. Gets swallowed by a fish. Finally goes. They repent — and he\'s mad about it. God loves outsiders.',
+  t:['Mercy','Mission','God\'s love for enemies'],
+  k:['Jonah 1','Jonah 2','Jonah 3:10','Jonah 4'],
+  who:'Jonah',
+  when:'c. 760 BC',
+  where:'Israel and Nineveh'},
+"Micah":{cat:'prophets',
+  i:'<path d="M6 4v16M18 4v16M6 12h12"/><circle cx="12" cy="12" r="2.5"/>',
+  l:'Do justice. Love mercy. Walk humbly.',
+  sum:'Warnings of judgment, but also a promise: a ruler from Bethlehem will come. The famous summary of true religion in 6:8.',
+  t:['Justice','Mercy','Humility'],
+  k:['Micah 5:2','Micah 6:8'],
+  who:'Micah',
+  when:'c. 740-700 BC',
+  where:'Judah'},
+"Nahum":{cat:'prophets',
+  i:'<path d="M4 16c4-8 12-8 16 0"/><path d="M8 16v3M12 16v3M16 16v3"/>',
+  l:'Nineveh\'s comeuppance.',
+  sum:'A century after Jonah, Nineveh has returned to evil. God promises judgment. Comfort for those it had crushed.',
+  t:['Justice','God\'s patience has limits'],
+  k:['Nahum 1:7'],
+  who:'Nahum',
+  when:'c. 660 BC',
+  where:'Nineveh (Assyria)'},
+"Habakkuk":{cat:'prophets',
+  i:'<path d="M12 4v6M12 14v6M5 12h6M13 12h6"/><circle cx="12" cy="12" r="1.5"/>',
+  l:'How long, Lord? — wrestling with God.',
+  sum:'Habakkuk asks the hard questions. God answers. The famous line: "The righteous shall live by faith" — which Paul will later quote.',
+  t:['Wrestling','Faith','Patience'],
+  k:['Habakkuk 2:4','Habakkuk 3:17-19'],
+  who:'Habakkuk',
+  when:'c. 605 BC',
+  where:'Judah'},
+"Zephaniah":{cat:'prophets',
+  i:'<path d="M12 4l3 5 5 1-4 4 1 6-5-3-5 3 1-6-4-4 5-1Z"/>',
+  l:'The great Day of the Lord — and a quiet song.',
+  sum:'A coming day of judgment. But also a stunning picture: God Himself will rejoice over His people with singing.',
+  t:['Day of the Lord','God\'s joy','Remnant'],
+  k:['Zephaniah 3:17'],
+  who:'Zephaniah',
+  when:'c. 630 BC',
+  where:'Judah'},
+"Haggai":{cat:'prophets',
+  i:'<rect x="6" y="9" width="12" height="11"/><path d="M6 9l6-5 6 5M10 14h4M10 17h4"/>',
+  l:'Finish the temple already.',
+  sum:'After the return from exile, the people stop rebuilding the temple. Haggai stirs them up: put God first, and watch what He does.',
+  t:['Priorities','Worship','Encouragement'],
+  k:['Haggai 1:5-8','Haggai 2:9'],
+  who:'Haggai, Zerubbabel',
+  when:'c. 520 BC',
+  where:'Jerusalem'},
+"Zechariah":{cat:'prophets',
+  i:'<circle cx="12" cy="12" r="7"/><path d="M12 5v14M5 12h14"/>',
+  l:'Visions of the King who is coming.',
+  sum:'Encouragement for the temple-rebuilders, and rich visions pointing to a coming King who rides on a donkey. Quoted often in the Gospels.',
+  t:['Hope','Messiah','Restoration'],
+  k:['Zechariah 4:6','Zechariah 9:9'],
+  who:'Zechariah',
+  when:'c. 520-480 BC',
+  where:'Jerusalem'},
+"Malachi":{cat:'prophets',
+  i:'<path d="M12 4v16"/><path d="M9 8l3-3 3 3M9 16l3 3 3-3"/>',
+  l:'Last word before 400 years of silence.',
+  sum:'A final call to wholehearted worship. A promise that a messenger like Elijah will come before the great day. Then the OT goes quiet — until John the Baptist.',
+  t:['Faithfulness','Coming messenger','Tithe'],
+  k:['Malachi 3:6','Malachi 3:10','Malachi 4:5-6'],
+  who:'Malachi',
+  when:'c. 430 BC',
+  where:'Jerusalem'},
+
+/* ========== NEW TESTAMENT — GOSPELS ========== */
+"Matthew":{cat:'gospels',
+  i:'<path d="M5 19l7-14 7 14Z"/><path d="M9 14h6M12 8v8" stroke-width="2"/>',
+  l:'Jesus — the promised King.',
+  sum:'Written for a Jewish audience. Shows Jesus as the long-promised Messiah and King, fulfilling OT prophecy. Includes the Sermon on the Mount.',
+  t:['Messiah','Kingdom','Fulfillment'],
+  k:['Matthew 5-7','Matthew 11:28-30','Matthew 28:18-20'],
+  who:'Jesus, the disciples',
+  when:'Events c. 4 BC - 30 AD',
+  where:'Israel'},
+"Mark":{cat:'gospels',
+  i:'<path d="M5 12l4-4v3h10v2H9v3Z" fill="currentColor" stroke="none"/>',
+  l:'Jesus on the move — fast.',
+  sum:'The shortest, fastest Gospel. "Immediately…" used 40+ times. Shows Jesus as the powerful Servant who acts. Likely Peter\'s eyewitness account through Mark.',
+  t:['Action','Service','Power'],
+  k:['Mark 1','Mark 8:34','Mark 10:45'],
+  who:'Jesus, the disciples',
+  when:'Events c. 4 BC - 30 AD',
+  where:'Israel'},
+"Luke":{cat:'gospels',
+  i:'<rect x="6" y="5" width="12" height="14" rx="1.5"/><path d="M9 9h6M9 12h6M9 15h4"/>',
+  l:'A careful account for the curious.',
+  sum:'A doctor and historian writes orderly research about Jesus. The most attention to women, outsiders, and the poor. The famous Christmas story is here.',
+  t:['Compassion','Outsiders','Salvation for all'],
+  k:['Luke 2','Luke 10:25-37','Luke 15','Luke 19:10'],
+  who:'Jesus, Mary, Zacchaeus, prodigal son',
+  when:'Events c. 4 BC - 30 AD',
+  where:'Israel'},
+"John":{cat:'gospels',
+  i:'<path d="M12 4l3 5 5 1-4 4 1 6-5-3-5 3 1-6-4-4 5-1Z" fill="currentColor" stroke="none" opacity=".15"/><path d="M12 4l3 5 5 1-4 4 1 6-5-3-5 3 1-6-4-4 5-1Z"/>',
+  l:'Jesus is God in the flesh.',
+  sum:'The deepest Gospel. Seven "I AM" statements. Seven signs. The clearest declarations of Jesus\' divinity. Written so you may believe.',
+  t:['Divinity','Belief','Life'],
+  k:['John 1:1-14','John 3:16','John 14','John 20:31'],
+  who:'Jesus, John (beloved disciple)',
+  when:'Events c. 4 BC - 30 AD',
+  where:'Israel'},
+
+/* ========== NEW TESTAMENT — ACTS ========== */
+"Acts":{cat:'acts',
+  i:'<circle cx="12" cy="12" r="3"/><path d="M12 5L12 2M12 22L12 19M19 12h3M2 12h3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"/>',
+  l:'The church explodes outward.',
+  sum:'The Spirit falls at Pentecost and the gospel spreads from Jerusalem to Rome. Peter, then Paul. Persecution, miracles, missionary journeys.',
+  t:['Spirit','Mission','Growth'],
+  k:['Acts 1:8','Acts 2','Acts 9','Acts 16:31'],
+  who:'Peter, Paul, Stephen, Barnabas',
+  when:'c. 30-62 AD',
+  where:'Jerusalem to Rome'},
+
+/* ========== NEW TESTAMENT — PAULINE LETTERS ========== */
+"Romans":{cat:'letters',
+  i:'<path d="M6 4v16M6 4h7a4 4 0 0 1 0 8H6M10 12l5 8"/>',
+  l:'The gospel in full.',
+  sum:'Paul\'s clearest, deepest letter. Everyone has sinned. Salvation comes by faith in Jesus, not by works. Nothing can separate you from God\'s love.',
+  t:['Gospel','Faith','Grace'],
+  k:['Romans 1:16','Romans 3:23','Romans 5:8','Romans 8','Romans 12:1-2'],
+  who:'Paul, the church in Rome',
+  when:'c. 57 AD',
+  where:'Written to Rome'},
+"1 Corinthians":{cat:'letters',
+  i:'<path d="M6 4v16M6 4h7a4 4 0 0 1 0 8H6M10 12l5 8"/><text x="17" y="9" font-size="6" fill="currentColor" stroke="none">1</text>',
+  l:'Messy church, real love.',
+  sum:'Paul addresses a chaotic church: divisions, sex issues, lawsuits, communion, gifts. Includes the famous love chapter (ch. 13) and the resurrection chapter (ch. 15).',
+  t:['Unity','Love','Resurrection'],
+  k:['1 Corinthians 13','1 Corinthians 15','1 Corinthians 10:13'],
+  who:'Paul, Corinthian believers',
+  when:'c. 55 AD',
+  where:'Written to Corinth'},
+"2 Corinthians":{cat:'letters',
+  i:'<path d="M6 4v16M6 4h7a4 4 0 0 1 0 8H6M10 12l5 8"/><text x="17" y="9" font-size="6" fill="currentColor" stroke="none">2</text>',
+  l:'Strong in weakness.',
+  sum:'Paul\'s most personal letter. He defends his ministry through tears and hardship. Famous line: "My grace is sufficient for you, for my power is made perfect in weakness."',
+  t:['Weakness','Comfort','Authenticity'],
+  k:['2 Corinthians 4:7-9','2 Corinthians 5:17','2 Corinthians 12:9-10'],
+  who:'Paul, Corinthian believers',
+  when:'c. 56 AD',
+  where:'Written to Corinth'},
+"Galatians":{cat:'letters',
+  i:'<path d="M5 12c0-4 3-7 7-7s7 3 7 7"/><path d="M12 12l4 4 4-4"/>',
+  l:'Freedom from legalism.',
+  sum:'Some are saying you need to follow Jewish law to be saved. Paul fires back: NO. The gospel is grace through faith — and that grace produces real freedom.',
+  t:['Grace','Freedom','Fruit of the Spirit'],
+  k:['Galatians 2:20','Galatians 3:28','Galatians 5:22-23'],
+  who:'Paul, Galatian churches',
+  when:'c. 49 AD',
+  where:'Galatia'},
+"Ephesians":{cat:'letters',
+  i:'<path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/>',
+  l:'Who you are in Christ.',
+  sum:'Two halves: who you ARE (chosen, loved, alive in Christ) and how to LIVE (unity, family, work, spiritual armor). One of Paul\'s richest letters.',
+  t:['Identity','Unity','Spiritual armor'],
+  k:['Ephesians 2:8-10','Ephesians 4:32','Ephesians 6:10-18'],
+  who:'Paul, Ephesian church',
+  when:'c. 60 AD',
+  where:'Written from prison to Ephesus'},
+"Philippians":{cat:'letters',
+  i:'<path d="M12 19s-7-4.3-7-9.2A4 4 0 0 1 12 7a4 4 0 0 1 7 2.8C19 14.7 12 19 12 19Z"/><path d="M12 11l1.5 2 -1.5 2-1.5-2Z" fill="currentColor"/>',
+  l:'Joy in any circumstance.',
+  sum:'Paul writes from prison — and the theme is JOY. Don\'t be anxious. Be thankful. "I can do all things through Christ who strengthens me."',
+  t:['Joy','Contentment','Christ\'s humility'],
+  k:['Philippians 2:5-11','Philippians 4:4-7','Philippians 4:13'],
+  who:'Paul, Philippian church',
+  when:'c. 61 AD',
+  where:'Written from prison'},
+"Colossians":{cat:'letters',
+  i:'<path d="M12 4v16M5 8l7-3 7 3M5 16l7 3 7-3"/><circle cx="12" cy="12" r="2"/>',
+  l:'Christ is enough. Christ is supreme.',
+  sum:'False teachers were saying Jesus + something else. Paul says NO — Jesus is supreme over everything, and in Him you have everything you need.',
+  t:['Supremacy of Christ','Fullness','New self'],
+  k:['Colossians 1:15-20','Colossians 3:1-2','Colossians 3:23'],
+  who:'Paul, Colossian church',
+  when:'c. 60 AD',
+  where:'Written from prison'},
+"1 Thessalonians":{cat:'letters',
+  i:'<path d="M5 16l7-12 7 12Z"/><path d="M12 16v4"/>',
+  l:'Live ready — Jesus is coming back.',
+  sum:'Paul encourages a young, persecuted church. Love each other. Live faithfully. Grieve with hope. Jesus will return.',
+  t:['Hope','Return of Christ','Faithfulness'],
+  k:['1 Thessalonians 4:13-18','1 Thessalonians 5:16-18'],
+  who:'Paul, Thessalonian church',
+  when:'c. 51 AD',
+  where:'Written to Thessalonica'},
+"2 Thessalonians":{cat:'letters',
+  i:'<path d="M5 16l7-12 7 12Z"/><path d="M12 16v4"/><text x="16" y="9" font-size="6" fill="currentColor" stroke="none">2</text>',
+  l:'Don\'t quit, even while you wait.',
+  sum:'Some thought Jesus had already come back and stopped working. Paul: stay steady, keep working, keep loving. He IS coming — but live well in the meantime.',
+  t:['Patience','Work','Steady faith'],
+  k:['2 Thessalonians 3:3','2 Thessalonians 3:13'],
+  who:'Paul, Thessalonian church',
+  when:'c. 52 AD',
+  where:'Written to Thessalonica'},
+"1 Timothy":{cat:'letters',
+  i:'<rect x="7" y="4" width="10" height="16" rx="1.5"/><path d="M10 8h4M10 12h4M10 16h4"/>',
+  l:'How to lead a church.',
+  sum:'Paul mentors young Timothy who pastors in Ephesus. Practical advice on leadership, false teachers, prayer, money, and personal integrity.',
+  t:['Leadership','Sound teaching','Integrity'],
+  k:['1 Timothy 4:12','1 Timothy 6:6-10'],
+  who:'Paul, Timothy',
+  when:'c. 63 AD',
+  where:'Written to Ephesus'},
+"2 Timothy":{cat:'letters',
+  i:'<rect x="7" y="4" width="10" height="16" rx="1.5"/><path d="M10 8h4M10 12h4M10 16h4"/><text x="16" y="9" font-size="6" fill="currentColor" stroke="none">2</text>',
+  l:'Paul\'s final words. Keep going.',
+  sum:'Paul writes from prison, awaiting execution. His last letter. "I have fought the good fight. I have finished the race." A powerful charge to keep the faith.',
+  t:['Endurance','Scripture','Faithfulness to the end'],
+  k:['2 Timothy 1:7','2 Timothy 3:16-17','2 Timothy 4:7'],
+  who:'Paul (final letter), Timothy',
+  when:'c. 67 AD',
+  where:'Written from prison in Rome'},
+"Titus":{cat:'letters',
+  i:'<path d="M6 4h12M12 4v16M8 20h8"/>',
+  l:'Sound teaching, godly living.',
+  sum:'A short letter to Titus pastoring on Crete. Appoint good leaders. Teach sound doctrine. Live what you believe.',
+  t:['Leadership','Doctrine','Good works'],
+  k:['Titus 2:11-14','Titus 3:5'],
+  who:'Paul, Titus',
+  when:'c. 63 AD',
+  where:'Written to Crete'},
+"Philemon":{cat:'letters',
+  i:'<path d="M5 12c0-2 2-4 4-4h6c2 0 4 2 4 4s-2 4-4 4H9"/><path d="M9 12l-3-3M9 16l-3 3"/>',
+  l:'Forgiveness in real life.',
+  sum:'A runaway slave named Onesimus has become a Christian. Paul writes to his master, Philemon, asking him to receive Onesimus back not as a slave but as a brother.',
+  t:['Forgiveness','Reconciliation','Grace lived out'],
+  k:['Philemon 1:15-17'],
+  who:'Paul, Philemon, Onesimus',
+  when:'c. 60 AD',
+  where:'Written to Colossae'},
+
+/* ========== NEW TESTAMENT — GENERAL LETTERS ========== */
+"Hebrews":{cat:'letters',
+  i:'<path d="M5 4v16M19 4v16M5 12h14"/><circle cx="12" cy="12" r="2"/>',
+  l:'Jesus is better. Period.',
+  sum:'Written to Jewish Christians tempted to go back. Jesus is better than angels, Moses, priests, the law, the temple — He fulfills it all. Don\'t drift away.',
+  t:['Supremacy of Christ','Faith','Endurance'],
+  k:['Hebrews 4:14-16','Hebrews 11','Hebrews 12:1-2'],
+  who:'Unknown author, Jewish Christians',
+  when:'c. 65 AD',
+  where:'Possibly written from Italy'},
+"James":{cat:'letters',
+  i:'<path d="M12 4v16M5 8h14M5 16h14"/><circle cx="12" cy="12" r="1.5"/>',
+  l:'Faith works.',
+  sum:'Faith that doesn\'t change how you live isn\'t real faith. Watch your tongue. Care for the poor. Be a doer, not just a hearer. Practical, sharp, gold.',
+  t:['Real faith','Words','Action'],
+  k:['James 1:2-5','James 1:19','James 2:14-17','James 3'],
+  who:'James (likely Jesus\' brother)',
+  when:'c. 45-49 AD',
+  where:'Written to scattered Jewish believers'},
+"1 Peter":{cat:'letters',
+  i:'<path d="M6 8l6-4 6 4v8l-6 4-6-4Z"/><circle cx="12" cy="12" r="2"/>',
+  l:'Hope through suffering.',
+  sum:'For believers suffering for their faith. You\'re not crazy, and you\'re not abandoned. Hold on — your inheritance is kept in heaven.',
+  t:['Suffering','Hope','Holy living'],
+  k:['1 Peter 1:3-7','1 Peter 5:6-7'],
+  who:'Peter, scattered believers',
+  when:'c. 64 AD',
+  where:'Written from "Babylon" (Rome)'},
+"2 Peter":{cat:'letters',
+  i:'<path d="M6 8l6-4 6 4v8l-6 4-6-4Z"/><circle cx="12" cy="12" r="2"/><text x="16" y="9" font-size="6" fill="currentColor" stroke="none">2</text>',
+  l:'Watch out for false teachers.',
+  sum:'Peter\'s farewell letter. False teachers are sneaking in. Keep growing. Remember: God is patient, but the day IS coming.',
+  t:['Truth','Growth','Second coming'],
+  k:['2 Peter 1:3-4','2 Peter 3:9'],
+  who:'Peter (final letter)',
+  when:'c. 67 AD',
+  where:'Written from Rome'},
+"1 John":{cat:'letters',
+  i:'<path d="M5 12c0-3 3-6 7-6s7 3 7 6-3 6-7 6-7-3-7-6Z"/><circle cx="12" cy="12" r="2" fill="currentColor"/>',
+  l:'Love, light, and assurance.',
+  sum:'How can I KNOW I\'m really a Christian? John gives the tests: love others, walk in light, hold to truth. Gentle, deep, reassuring.',
+  t:['Assurance','Love','Light'],
+  k:['1 John 1:9','1 John 3:1','1 John 4:7-8','1 John 5:13'],
+  who:'John (the apostle)',
+  when:'c. 90 AD',
+  where:'Written to churches in Asia'},
+"2 John":{cat:'letters',
+  i:'<path d="M5 12c0-3 3-6 7-6s7 3 7 6-3 6-7 6-7-3-7-6Z"/><text x="16" y="9" font-size="6" fill="currentColor" stroke="none">2</text>',
+  l:'Love + truth, in one tiny letter.',
+  sum:'A postcard-length letter: love each other, hold to the truth, watch out for deceivers. Both love AND truth matter.',
+  t:['Love','Truth','Discernment'],
+  k:['2 John 1:5-6'],
+  who:'John (the apostle)',
+  when:'c. 90 AD',
+  where:'Written to "the chosen lady"'},
+"3 John":{cat:'letters',
+  i:'<path d="M5 12c0-3 3-6 7-6s7 3 7 6-3 6-7 6-7-3-7-6Z"/><text x="16" y="9" font-size="6" fill="currentColor" stroke="none">3</text>',
+  l:'Show hospitality. Be a good leader.',
+  sum:'Another postcard. Praise for Gaius (a hospitable believer), warning about Diotrephes (a power-grabber). Real church life, even in 60 verses.',
+  t:['Hospitality','Servant leadership','Truth'],
+  k:['3 John 1:4'],
+  who:'John, Gaius',
+  when:'c. 90 AD',
+  where:'Written to Gaius'},
+"Jude":{cat:'letters',
+  i:'<path d="M12 3l8 4v6c0 4-3 7-8 8-5-1-8-4-8-8V7Z"/>',
+  l:'Contend for the faith.',
+  sum:'Jude (Jesus\' half-brother) warns sharply about false teachers slipping into the church. Stand firm. Keep the faith. Snatch others out of the fire.',
+  t:['Defending truth','Mercy','Perseverance'],
+  k:['Jude 1:3','Jude 1:20-21','Jude 1:24-25'],
+  who:'Jude (Jesus\' brother)',
+  when:'c. 65 AD',
+  where:'Written to believers in general'},
+
+/* ========== NEW TESTAMENT — REVELATION ========== */
+"Revelation":{cat:'revelation',
+  i:'<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="4"/>',
+  l:'How the story ends.',
+  sum:'John\'s wild vision while exiled on Patmos. Symbols, beasts, judgments — and ultimately, Jesus wins, evil is defeated, and God makes all things new.',
+  t:['Victory','Hope','New creation'],
+  k:['Revelation 1:8','Revelation 5','Revelation 21:1-5','Revelation 22:20'],
+  who:'John (the apostle), Jesus',
+  when:'c. 95 AD',
+  where:'Patmos (island)'}
+};
+
 
 const HELPERS = {
 "John 1:1":"Before anything existed, Jesus already was. 'The Word' means Jesus — He IS God, not separate from Him.",
@@ -1493,7 +2224,7 @@ function wrapText(ctx,text,x,y,maxW,lh){ const words=text.split(' '); let line='
 /* ============ MORE MENU ============ */
 const MORE_ITEMS={
   grow:[['progress','Progress','progress'],['timer','Focus Timer','timer'],['ai','AI Study','ai'],['plans','Reading Plans','plans']],
-  discover:[['topics','Find a Verse','heart'],['bigpicture','The Big Picture','map'],['library','Library','library'],['bookmarks','Bookmarks','bookmark'],['science','Science & Brain','brain'],['evangelism','Start Here','cross'],['testimonies','Testimonies','people']],
+  discover:[['topics','Find a Verse','heart'],['explorer','Bible Explorer','explore'],['bigpicture','The Big Picture','map'],['library','Library','library'],['bookmarks','Bookmarks','bookmark'],['science','Science & Brain','brain'],['evangelism','Start Here','cross'],['testimonies','Testimonies','people']],
   connect:[['videos','Videos & Links','video'],['community','Community','people']],
   app:[['settings','Settings','settings'],['mydata','My Data','data']]
 };
@@ -1507,10 +2238,10 @@ function renderMore(){
 
 /* ============ SUB SCREEN ROUTER ============ */
 function renderSub(id){
-  const titles={progress:'Progress',timer:'Focus Timer',ai:'AI Study',plans:'Reading Plans',bookmarks:'Bookmarks',science:'Science & Brain',evangelism:'Start Here',testimonies:'Testimonies',videos:'Videos & Links',community:'Community',mydata:'My Data',topics:'Find a Verse',bigpicture:'The Big Picture'};
+  const titles={progress:'Progress',timer:'Focus Timer',ai:'AI Study',plans:'Reading Plans',bookmarks:'Bookmarks',science:'Science & Brain',evangelism:'Start Here',testimonies:'Testimonies',videos:'Videos & Links',community:'Community',mydata:'My Data',topics:'Find a Verse',bigpicture:'The Big Picture',explorer:'Bible Explorer'};
   document.getElementById('subTitle').textContent=titles[id]||'Section';
   const c=document.getElementById('subContent');
-  const map={progress:renderProgress,timer:renderTimer,ai:renderAI,plans:renderPlans,bookmarks:renderBookmarks,science:renderScience,evangelism:renderEvangelism,testimonies:renderTestimonies,videos:renderVideos,community:renderCommunity,mydata:renderMyData,topics:renderTopics,bigpicture:renderBigPicture};
+  const map={progress:renderProgress,timer:renderTimer,ai:renderAI,plans:renderPlans,bookmarks:renderBookmarks,science:renderScience,evangelism:renderEvangelism,testimonies:renderTestimonies,videos:renderVideos,community:renderCommunity,mydata:renderMyData,topics:renderTopics,bigpicture:renderBigPicture,explorer:renderExplorer};
   c.innerHTML=(map[id]||(()=>'<div class="empty">Coming soon</div>'))();
   if(id==='timer')setTimer(25);
   if(id==='ai'){ c.innerHTML+=`<div style="position:sticky;bottom:0;background:var(--bg);padding:10px 0;display:flex;gap:8px;"><input id="aiInput" placeholder="Ask about the Bible…" style="margin-bottom:0;" onkeydown="if(event.key==='Enter')sendAI()"><button class="iconbtn" style="flex-shrink:0;background:var(--teal);color:#fff;" onclick="sendAI()">➤</button></div>`; }
@@ -1580,6 +2311,332 @@ function shelfCard(s,i){
   </div>`;
 }
 function toggleShelf(i){ _openShelf = _openShelf===i? null : i; renderSub('bigpicture'); }
+
+/* ============ BIBLE EXPLORER (all 66 books) ============ */
+let _explorerFilter='All';
+let _explorerSearch='';
+let _explorerBook=null;
+const CAT_FILTERS=['All','OT','NT','law','history','wisdom','prophets','gospels','acts','letters','revelation'];
+const CAT_LABELS={All:'All Books',OT:'Old Testament',NT:'New Testament',law:'Law',history:'History',wisdom:'Wisdom',prophets:'Prophets',gospels:'Gospels',acts:'Acts',letters:'Letters',revelation:'Revelation'};
+const OT_CATS=['law','history','wisdom','prophets'];
+const NT_CATS=['gospels','acts','letters','revelation'];
+
+function bookIcon(name,size){
+  const b=EXPLORER[name]; if(!b) return '';
+  const s=size||28; const col=BOOK_CATS[b.cat].color;
+  return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 5px ${col}66);">${b.i}</svg>`;
+}
+function renderExplorer(){
+  if(_explorerBook) return renderBookDetail(_explorerBook);
+  const q=_explorerSearch.toLowerCase().trim();
+  // Filter
+  let books=Object.entries(EXPLORER);
+  if(_explorerFilter==='OT') books=books.filter(([n,b])=>OT_CATS.includes(b.cat));
+  else if(_explorerFilter==='NT') books=books.filter(([n,b])=>NT_CATS.includes(b.cat));
+  else if(_explorerFilter!=='All') books=books.filter(([n,b])=>b.cat===_explorerFilter);
+  if(q) books=books.filter(([n,b])=>n.toLowerCase().includes(q)||b.l.toLowerCase().includes(q)||b.t.some(t=>t.toLowerCase().includes(q)));
+
+  let html=`<div style="font-size:14px;color:var(--text-dim);line-height:1.6;margin:0 4px 14px;">All 66 books — tap any one to explore its story, themes, and key passages.</div>
+  <input id="exSearch" placeholder="Search a book or theme…" value="${esc(_explorerSearch)}" oninput="_explorerSearch=this.value;renderSub('explorer');setTimeout(()=>{var s=document.getElementById('exSearch');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length);}},0)" style="margin-bottom:10px;">
+  <div class="fmt-bar" style="margin-bottom:14px;">${CAT_FILTERS.map(c=>`<button class="fmt-tog ${_explorerFilter===c?'on':''}" onclick="_explorerFilter='${c}';renderSub('explorer')">${CAT_LABELS[c]}</button>`).join('')}</div>`;
+
+  if(!books.length){ return html+'<div class="empty"><div class="e-ico">📖</div>No books match. Try another search.</div>'; }
+
+  // Group by category if showing All / OT / NT
+  if(['All','OT','NT'].includes(_explorerFilter)){
+    const groupCats = _explorerFilter==='OT'? OT_CATS : _explorerFilter==='NT'? NT_CATS : [...OT_CATS,...NT_CATS];
+    groupCats.forEach(cat=>{
+      const inCat=books.filter(([n,b])=>b.cat===cat);
+      if(!inCat.length) return;
+      html+=`<div style="font-size:11px;font-weight:700;color:${BOOK_CATS[cat].color};text-transform:uppercase;letter-spacing:.1em;margin:18px 4px 8px;">${BOOK_CATS[cat].name} — ${inCat.length} ${inCat.length===1?'book':'books'}</div>`;
+      html+=inCat.map(([n,b])=>bookTile(n,b)).join('');
+    });
+  } else {
+    html+=books.map(([n,b])=>bookTile(n,b)).join('');
+  }
+  return html;
+}
+function bookTile(name,b){
+  const col=BOOK_CATS[b.cat].color;
+  return `<div class="card tap" style="display:flex;align-items:center;gap:14px;border-left:4px solid ${col};" onclick="openBook('${esc(name)}')">
+    <div style="flex-shrink:0;width:46px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:radial-gradient(circle at 50% 40%,${col}33,transparent 75%);">${bookIcon(name,30)}</div>
+    <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:16px;">${esc(name)}</div><div style="font-size:13px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(b.l)}</div></div>
+    <div style="color:var(--text-faint);font-size:18px;">›</div>
+  </div>`;
+}
+function openBook(name){ _explorerBook=name; renderSub('explorer'); document.querySelector('.screen.active').scrollTop=0; }
+function closeBook(){ _explorerBook=null; renderSub('explorer'); }
+function renderBookDetail(name){
+  const b=EXPLORER[name]; if(!b) return '<div class="empty">Not found</div>';
+  const col=BOOK_CATS[b.cat].color;
+  const chap=CHAPTER_COUNTS[name]||1;
+  let chapGrid='';
+  for(let i=1;i<=chap;i++){ chapGrid+=`<span class="pill" style="min-width:38px;justify-content:center;font-size:12px;" onclick="loadReading('${esc(name)} ${i}')">${i}</span>`; }
+  return `<button class="btn btn-ghost btn-sm" style="margin-bottom:14px;width:auto;" onclick="closeBook()">← All Books</button>
+  <div class="card" style="border-left:5px solid ${col};">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+      <div style="flex-shrink:0;width:64px;height:64px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:radial-gradient(circle at 50% 40%,${col}44,transparent 70%);">${bookIcon(name,42)}</div>
+      <div><div style="font-size:24px;font-weight:800;">${esc(name)}</div><div style="font-size:13px;color:${col};font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-top:2px;">${BOOK_CATS[b.cat].name} · ${chap} ${chap===1?'chapter':'chapters'}</div></div>
+    </div>
+    <div style="font-size:17px;font-style:italic;color:var(--gold);margin-bottom:14px;line-height:1.5;">"${esc(b.l)}"</div>
+    <div style="font-size:15px;line-height:1.75;color:var(--text-dim);">${esc(b.sum)}</div>
+  </div>
+  <div class="section-title">Themes</div>
+  <div class="card"><div style="display:flex;flex-wrap:wrap;gap:8px;">${b.t.map(t=>`<span style="padding:7px 13px;border-radius:20px;background:${col}22;color:${col};font-size:13px;font-weight:600;">${esc(t)}</span>`).join('')}</div></div>
+  <div class="section-title">Key Passages</div>
+  <div class="card"><div style="display:flex;flex-wrap:wrap;gap:8px;">${b.k.map(k=>`<span class="pill" onclick="loadReading('${esc(k)}')">${esc(k)}</span>`).join('')}</div></div>
+  <div class="section-title">Quick Facts</div>
+  <div class="card">
+    <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;font-size:14px;line-height:1.6;">
+      <div style="color:var(--text-faint);font-weight:600;">When</div><div style="color:var(--text);">${esc(b.when)}</div>
+      <div style="color:var(--text-faint);font-weight:600;">Where</div><div style="color:var(--text);">${esc(b.where)}</div>
+      <div style="color:var(--text-faint);font-weight:600;">Who</div><div style="color:var(--text);">${esc(b.who)}</div>
+    </div>
+  </div>
+  <div class="section-title">Read the Book</div>
+  <div class="card"><div style="font-size:13px;color:var(--text-faint);margin-bottom:10px;">Tap a chapter to open it in the reader.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;">${chapGrid}</div></div>
+  <div style="text-align:center;color:var(--text-faint);font-size:12px;margin-top:20px;line-height:1.6;">📍 Maps, timelines & people deep-dives coming soon.</div>`;
+}
+
+/* ============ FOCUSWORDBIBLEWALL ============
+   A vertical, perspective-scrolled gallery of all 66 books.
+   - Each panel sits at a Y offset; scrolling moves the track.
+   - Panel closest to center grows + glows; far ones shrink+fade+blur.
+   - The focus card above updates to show the centered book's details.
+   ============================================================= */
+const WALL = {
+  books: Object.keys(EXPLORER),        // canonical order = the order they appear in EXPLORER
+  scroll: 0,                            // current scroll position (px)
+  vel: 0,                               // momentum velocity
+  focusIdx: 0,                          // currently centered book
+  rafId: null,
+  built: false,
+  spacing: 100                          // px between panels in flat space
+};
+
+function wallBookGlyph(name){
+  const b=EXPLORER[name]; if(!b) return '';
+  const col=BOOK_CATS[b.cat].color;
+  return `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#e8b84b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 5px ${col}aa);">${b.i}</svg>`;
+}
+function isOT(name){ return ['law','history','wisdom','prophets'].includes(EXPLORER[name].cat); }
+
+function buildWall(){
+  const track=document.getElementById('wallTrack');
+  track.innerHTML = WALL.books.map((name,i)=>{
+    const b=EXPLORER[name];
+    const cls = isOT(name) ? 'ot' : 'nt';
+    const num = String(i+1).padStart(2,'0');
+    return `<div class="wall-panel ${cls}" data-idx="${i}" onclick="wallTap(${i})">
+      <div class="wp-icon">${wallBookGlyph(name)}</div>
+      <div class="wp-body">
+        <div class="wp-num">BOOK ${num}</div>
+        <div class="wp-name">${esc(name)}</div>
+        <div class="wp-memo">${esc(b.l)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  WALL.built=true;
+  setupWallScroll();
+  WALL.scroll = 0;
+  WALL.focusIdx = 0;
+  updateWall();
+}
+
+function setupWallScroll(){
+  const stage=document.getElementById('wallStage');
+  let startY=0, startScroll=0, dragging=false, lastY=0, lastT=0;
+  const down=e=>{
+    dragging=true;
+    const p=e.touches?e.touches[0]:e;
+    startY=lastY=p.clientY; lastT=Date.now();
+    startScroll=WALL.scroll;
+    WALL.vel=0;
+    if(WALL.rafId){ cancelAnimationFrame(WALL.rafId); WALL.rafId=null; }
+  };
+  const move=e=>{
+    if(!dragging) return;
+    const p=e.touches?e.touches[0]:e;
+    const dy = p.clientY - startY;
+    WALL.scroll = startScroll - dy;     // drag down → scroll up the wall
+    const maxScroll = (WALL.books.length-1) * WALL.spacing;
+    WALL.scroll = Math.max(-WALL.spacing*0.5, Math.min(maxScroll + WALL.spacing*0.5, WALL.scroll));
+    const now=Date.now(); const dt=now-lastT;
+    if(dt>0){ WALL.vel = -(p.clientY - lastY) / dt * 16; }
+    lastY=p.clientY; lastT=now;
+    updateWall();
+    if(e.preventDefault) e.preventDefault();
+  };
+  const up=()=>{
+    if(!dragging) return;
+    dragging=false;
+    if(Math.abs(WALL.vel) > 0.5){ WALL.rafId=requestAnimationFrame(wallMomentum); }
+    else { snapToNearest(); }
+  };
+  stage.addEventListener('touchstart',down,{passive:true});
+  stage.addEventListener('touchmove',move,{passive:false});
+  stage.addEventListener('touchend',up);
+  stage.addEventListener('mousedown',down);
+  stage.addEventListener('mousemove',move);
+  stage.addEventListener('mouseup',up);
+  stage.addEventListener('mouseleave',up);
+  // Wheel support for desktop testing
+  stage.addEventListener('wheel',e=>{
+    WALL.scroll += e.deltaY * 0.6;
+    const maxScroll = (WALL.books.length-1) * WALL.spacing;
+    WALL.scroll = Math.max(0, Math.min(maxScroll, WALL.scroll));
+    updateWall();
+    e.preventDefault();
+  },{passive:false});
+}
+
+function wallMomentum(){
+  WALL.scroll += WALL.vel;
+  WALL.vel *= 0.93;
+  const maxScroll = (WALL.books.length-1) * WALL.spacing;
+  // Soft clamp
+  if(WALL.scroll < 0){ WALL.scroll = 0; WALL.vel = 0; }
+  if(WALL.scroll > maxScroll){ WALL.scroll = maxScroll; WALL.vel = 0; }
+  updateWall();
+  if(Math.abs(WALL.vel) > 0.15){ WALL.rafId=requestAnimationFrame(wallMomentum); }
+  else { WALL.rafId=null; snapToNearest(); }
+}
+
+function snapToNearest(){
+  const target = Math.round(WALL.scroll / WALL.spacing) * WALL.spacing;
+  const startScroll = WALL.scroll;
+  const delta = target - startScroll;
+  if(Math.abs(delta) < 0.5) return;
+  const startT = Date.now();
+  const duration = 260;
+  const ease = t => 1 - Math.pow(1-t,3);
+  if(WALL.rafId) cancelAnimationFrame(WALL.rafId);
+  function step(){
+    const t = Math.min(1,(Date.now()-startT)/duration);
+    WALL.scroll = startScroll + delta * ease(t);
+    updateWall();
+    if(t<1) WALL.rafId=requestAnimationFrame(step);
+    else { WALL.rafId=null; }
+  }
+  step();
+}
+
+function updateWall(){
+  const track=document.getElementById('wallTrack');
+  if(!track) return;
+  const panels=track.querySelectorAll('.wall-panel');
+  // Determine current focused book by which is nearest to scroll
+  const newFocus = Math.max(0, Math.min(WALL.books.length-1, Math.round(WALL.scroll/WALL.spacing)));
+  if(newFocus !== WALL.focusIdx){
+    WALL.focusIdx = newFocus;
+    updateWallFocus();
+  }
+  panels.forEach((el,i)=>{
+    // Each panel's signed distance from focus, in px
+    const offset = (i * WALL.spacing) - WALL.scroll;
+    // Map offset → 3D Y position, rotation angle, scale, opacity, blur.
+    const absOff = Math.abs(offset);
+    // Vertical position: roughly compress the wall as it recedes
+    const y = offset * 0.92;
+    // Tilt panels slightly so the wall curves toward viewer
+    const rotX = Math.max(-30, Math.min(30, -offset * 0.08));
+    // Push receding panels back in Z so they shrink in perspective
+    const tz = -Math.min(absOff * 1.4, 320);
+    // Scale boost for the centered panel
+    const scale = absOff < WALL.spacing*0.4 ? 1.18 : 1;
+    // Fade and blur as it recedes
+    const op = absOff > WALL.spacing*4.5 ? 0 :
+               absOff > WALL.spacing*2.8 ? (WALL.spacing*4.5-absOff)/(WALL.spacing*1.7) : 1;
+    const blur = absOff > WALL.spacing*1.6 ? Math.min(3, (absOff-WALL.spacing*1.6)/WALL.spacing) : 0;
+    el.style.transform = `translate(-50%, calc(-50% + ${y}px)) translateZ(${tz}px) rotateX(${rotX}deg) scale(${scale.toFixed(3)})`;
+    el.style.opacity = op.toFixed(2);
+    el.style.filter = blur>0 ? `blur(${blur.toFixed(2)}px)` : 'none';
+    el.style.pointerEvents = absOff < WALL.spacing*0.45 ? 'auto' : 'none';
+    el.style.zIndex = String(100 - Math.round(absOff));
+  });
+}
+
+function updateWallFocus(){
+  const name = WALL.books[WALL.focusIdx];
+  const b = EXPLORER[name];
+  if(!b) return;
+  const cls = isOT(name) ? 'ot' : 'nt';
+  const col = BOOK_CATS[b.cat].color;
+  const fc = document.getElementById('wallFocus');
+  fc.className = 'wall-focus ' + cls;
+  fc.innerHTML = `
+    <div class="fc-top">
+      <div class="fc-icon">${wallBookGlyph(name)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span class="fc-num">BOOK ${String(WALL.focusIdx+1).padStart(2,'0')} / 66</span>
+          <span class="fc-cat" style="color:${col};">${BOOK_CATS[b.cat].name}</span>
+        </div>
+        <div class="fc-name">${esc(name)}</div>
+      </div>
+    </div>
+    <div class="fc-memory">"${esc(b.l)}"</div>
+    <div class="fc-sum">${esc(b.sum)}</div>
+    <div class="fc-actions">
+      <button class="btn btn-primary btn-sm" style="width:auto;" onclick="go('explorer');setTimeout(()=>openBook('${esc(name)}'),50)">Open Book →</button>
+      <button class="btn btn-ghost btn-sm" style="width:auto;" onclick="loadReading('${esc(name)} 1')">Read Ch. 1</button>
+    </div>`;
+}
+
+function wallTap(i){
+  if(i === WALL.focusIdx){
+    // already focused → open
+    const name = WALL.books[i];
+    go('explorer'); setTimeout(()=>openBook(name),50);
+  } else {
+    // scroll to bring it to focus
+    wallScrollTo(i);
+  }
+}
+function wallScrollTo(i){
+  const target = i * WALL.spacing;
+  const startScroll = WALL.scroll;
+  const delta = target - startScroll;
+  const startT = Date.now();
+  const duration = 500;
+  const ease = t => 1 - Math.pow(1-t,3);
+  if(WALL.rafId) cancelAnimationFrame(WALL.rafId);
+  function step(){
+    const t = Math.min(1,(Date.now()-startT)/duration);
+    WALL.scroll = startScroll + delta * ease(t);
+    updateWall();
+    if(t<1) WALL.rafId=requestAnimationFrame(step);
+    else WALL.rafId=null;
+  }
+  step();
+}
+
+function wallSearchPrompt(){
+  openSheet(`<h3>🔍 Jump to a book</h3>
+    <input id="wallJumpIn" placeholder="Type a book name…" oninput="updateWallJumpList()" autofocus>
+    <div id="wallJumpList" style="max-height:55vh;overflow-y:auto;margin-top:10px;"></div>`);
+  setTimeout(()=>{ const el=document.getElementById('wallJumpIn'); if(el)el.focus(); updateWallJumpList(); },80);
+}
+function updateWallJumpList(){
+  const inp=document.getElementById('wallJumpIn'); if(!inp) return;
+  const q=(inp.value||'').toLowerCase().trim();
+  const matches = WALL.books.map((n,i)=>({n,i})).filter(x=>!q || x.n.toLowerCase().includes(q) || EXPLORER[x.n].l.toLowerCase().includes(q));
+  const list=document.getElementById('wallJumpList');
+  list.innerHTML = matches.map(x=>{
+    const cls = isOT(x.n)?'ot':'nt';
+    const col = cls==='ot'?'#9b2fb0':'#13a3cc';
+    return `<div class="card tap" style="display:flex;align-items:center;gap:12px;border-left:4px solid ${col};margin-bottom:8px;padding:10px;" onclick="closeSheet();wallScrollTo(${x.i})">
+      <div style="font-size:10px;font-weight:700;color:${col};letter-spacing:.1em;width:38px;">${String(x.i+1).padStart(2,'0')}</div>
+      <div style="flex:1;"><div style="font-weight:700;">${esc(x.n)}</div><div style="font-size:12px;color:var(--text-dim);">${esc(EXPLORER[x.n].l)}</div></div>
+    </div>`;
+  }).join('') || '<div class="empty" style="padding:20px;color:var(--text-faint);">No match</div>';
+}
+
+function initWall(){
+  if(!WALL.built) buildWall();
+  else { updateWall(); }
+}
 
 function renderProgress(){
   // heatmap last 35 days
