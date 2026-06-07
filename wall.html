@@ -3050,6 +3050,91 @@ function EmblemDefs() {
     stopColor: "#cf9c46"
   }))));
 }
+
+// ---- Sacred Wall environment system ----
+const ENV_BASE = "images/wall/environments/"; // relative path (correct for GitHub Pages project site)
+const ENV_OPACITY = 0.32; // ~32% visible so the plaques stay the hero
+const ENV_FILES = ["law.JPG", "history.JPG", "wisdom.JPG", "major_prophets.JPG", "minor_prophets.JPG", "gospels.JPG", "acts.JPG", "pauline_letters.JPG", "pastoral_letters.JPG", "general_epistles.JPG", "hebrews.JPG", "revelation.JPG"];
+// Explicit mapping (matches the requested groups, not the internal category field)
+function envFile(book) {
+  if (!book) return "law.JPG";
+  const n = book.number;
+  if (n <= 5) return "law.JPG"; // Genesis–Deuteronomy
+  if (n <= 17) return "history.JPG"; // Joshua–Esther
+  if (n <= 22) return "wisdom.JPG"; // Job–Song of Solomon
+  if (n <= 27) return "major_prophets.JPG"; // Isaiah–Daniel
+  if (n <= 39) return "minor_prophets.JPG"; // Hosea–Malachi
+  if (n <= 43) return "gospels.JPG"; // Matthew–John
+  if (n === 44) return "acts.JPG"; // Acts
+  if (n === 58) return "hebrews.JPG"; // Hebrews
+  if (n === 66) return "revelation.JPG"; // Revelation
+  if (n >= 59 && n <= 65) return "general_epistles.JPG"; // James–Jude
+  if (n >= 54 && n <= 56) return "pastoral_letters.JPG"; // 1 Timothy, 2 Timothy, Titus
+  return "pauline_letters.JPG"; // Romans–2 Thess + Philemon
+}
+// Full-screen backdrop that crossfades (1500ms) when the environment changes
+function EnvLayer({
+  src,
+  parallaxRef
+}) {
+  const [layers, setLayers] = useState(src ? [{
+    key: 0,
+    src,
+    on: true
+  }] : []);
+  const idRef = useRef(0);
+  useEffect(() => {
+    if (!src) return;
+    setLayers(ls => {
+      const last = ls[ls.length - 1];
+      if (last && last.src === src) return ls; // already showing it
+      return [...ls.slice(-1), {
+        key: ++idRef.current,
+        src,
+        on: false
+      }];
+    });
+  }, [src]);
+  useEffect(() => {
+    // fade the new layer in
+    const pending = layers.find(l => !l.on);
+    if (!pending) return;
+    const r = requestAnimationFrame(() => requestAnimationFrame(() => setLayers(ls => ls.map(l => l.key === pending.key ? {
+      ...l,
+      on: true
+    } : l))));
+    return () => cancelAnimationFrame(r);
+  }, [layers]);
+  useEffect(() => {
+    // drop the old layer after the fade
+    if (layers.length <= 1) return;
+    const to = setTimeout(() => setLayers(ls => ls.slice(-1)), 1700);
+    return () => clearTimeout(to);
+  }, [layers]);
+  return /*#__PURE__*/React.createElement("div", {
+    ref: parallaxRef,
+    style: {
+      position: "absolute",
+      inset: 0,
+      zIndex: 1,
+      pointerEvents: "none",
+      transform: "scale(1.16)",
+      willChange: "transform"
+    }
+  }, layers.map((l, i) => /*#__PURE__*/React.createElement("div", {
+    key: l.key,
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundImage: `url("${ENV_BASE}${l.src}")`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      filter: "saturate(0.82)",
+      opacity: i === layers.length - 1 && l.on ? ENV_OPACITY : 0,
+      transition: "opacity 1500ms ease"
+    }
+  })));
+}
 function Plaque({
   book,
   focused,
@@ -3532,6 +3617,7 @@ function FocusWordBibleWall() {
   const lastCol = useRef(0);
   const pinned = useRef(false);
   const openRef = useRef(false); // true while a book page is open (pause wall gestures)
+  const envRef = useRef(null); // background environment layer (parallax)
   const mainRef = useRef(null);
   const stripRef = useRef(null);
   const reflRef = useRef(null);
@@ -3559,6 +3645,12 @@ function FocusWordBibleWall() {
   }, []);
   const scale = Math.max(0.42, Math.min(1.15, Math.min(vp.w / 1180, vp.h / 760)));
   const isNarrow = vp.w < 760;
+  useEffect(() => {
+    ENV_FILES.forEach(f => {
+      const im = new Image();
+      im.src = ENV_BASE + f;
+    });
+  }, []);
   useEffect(() => {
     const MAXC = COLS - 1;
     const tick = () => {
@@ -3597,11 +3689,22 @@ function FocusWordBibleWall() {
       const t = `translateX(${slide}px)`;
       if (stripRef.current) stripRef.current.style.transform = t;
       if (reflRef.current) reflRef.current.style.transform = t;
+
+      // gentle background parallax — moves much slower than the wall (subconscious)
+      if (envRef.current) {
+        const frac = MAXC > 0 ? p / MAXC : 0;
+        const shift = (frac - 0.5) * 40; // about ±20px across the whole wall
+        envRef.current.style.transform = `translate3d(${-shift}px,0,0) scale(1.16)`;
+      }
       const col = clamp(Math.round(p));
       if (col !== lastCol.current) {
         lastCol.current = col;
         setFocusedCol(col);
-        if (!pinned.current) setActive(OT[col] || NT[col]);
+        if (!pinned.current) {
+          const b = OT[col] || NT[col];
+          setActive(b);
+          if (b) console.log(`Focused Book: ${b.name}\nEnvironment: ${envFile(b)}`);
+        }
       }
       rafId.current = requestAnimationFrame(tick);
     };
@@ -3747,7 +3850,26 @@ function FocusWordBibleWall() {
       perspectiveOrigin: "50% 46%",
       touchAction: "none"
     }
-  }, /*#__PURE__*/React.createElement(EmblemDefs, null), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(EnvLayer, {
+    src: envFile(active),
+    parallaxRef: envRef
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      zIndex: 1,
+      pointerEvents: "none",
+      background: "rgba(4,4,12,0.42)"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      zIndex: 1,
+      pointerEvents: "none",
+      background: "radial-gradient(125% 110% at 50% 42%, transparent 36%, rgba(2,2,8,0.74) 100%)"
+    }
+  }), /*#__PURE__*/React.createElement(EmblemDefs, null), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
       top: 20,

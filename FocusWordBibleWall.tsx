@@ -140,6 +140,40 @@ const USE_SCENE_FALLBACK = true;
 const IMAGE_HAS_OWN_TITLE = false;
 const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 const artworkSrc = (book) => `${ART_BASE}${slug(book.name)}.${ART_EXT}`;
+
+// Try several likely filenames so the image loads regardless of how it was saved
+// (lowercase, Capitalized, spaces, .jpg/.jpeg/.png). First one that exists wins.
+function candidateSrcs(book) {
+  const s = slug(book.name);                                  // genesis, 1-samuel, song-of-solomon
+  const capWords = (x) => x.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("-");
+  const stems = [s, capWords(s), s.charAt(0).toUpperCase() + s.slice(1), book.name];
+  const bases = [ART_BASE, "images/"];                        // images/wall/ first, then images/
+  const exts = ["JPG", "jpg", "jpeg", "JPEG", "png", "PNG", "webp"];
+  const seen = {}, out = [];
+  stems.forEach((st) => bases.forEach((b) => exts.forEach((e) => {
+    const u = `${b}${st}.${e}`;
+    if (!seen[u]) { seen[u] = 1; out.push(u); }
+  })));
+  return out;
+}
+function ArtImg({ book, onLoaded, fade = true }) {
+  const cands = candidateSrcs(book);
+  const [i, setI] = useState(0);
+  const [ok, setOk] = useState(false);
+  if (i >= cands.length) return null; // all failed -> the scene behind it stays visible
+  return (
+    <img
+      src={cands[i]}
+      alt={book.name}
+      loading="lazy"
+      decoding="async"
+      onLoad={() => { setOk(true); if (onLoaded) onLoaded(); }}
+      onError={() => { setOk(false); setI(i + 1); }}
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+        opacity: ok ? 1 : 0, transition: fade ? "opacity 0.45s ease" : "none" }}
+    />
+  );
+}
 // -------------------------------------------------------------------------
 
 const STARS = (
@@ -277,6 +311,67 @@ function EmblemDefs() {
   );
 }
 
+// ---- Sacred Wall environment system ----
+const ENV_BASE = "images/wall/environments/";   // relative path (correct for GitHub Pages project site)
+const ENV_OPACITY = 0.32;                        // ~32% visible so the plaques stay the hero
+const ENV_FILES = ["law.JPG", "history.JPG", "wisdom.JPG", "major_prophets.JPG", "minor_prophets.JPG",
+  "gospels.JPG", "acts.JPG", "pauline_letters.JPG", "pastoral_letters.JPG", "general_epistles.JPG",
+  "hebrews.JPG", "revelation.JPG"];
+// Explicit mapping (matches the requested groups, not the internal category field)
+function envFile(book) {
+  if (!book) return "law.JPG";
+  const n = book.number;
+  if (n <= 5) return "law.JPG";                  // Genesis–Deuteronomy
+  if (n <= 17) return "history.JPG";             // Joshua–Esther
+  if (n <= 22) return "wisdom.JPG";              // Job–Song of Solomon
+  if (n <= 27) return "major_prophets.JPG";      // Isaiah–Daniel
+  if (n <= 39) return "minor_prophets.JPG";      // Hosea–Malachi
+  if (n <= 43) return "gospels.JPG";             // Matthew–John
+  if (n === 44) return "acts.JPG";               // Acts
+  if (n === 58) return "hebrews.JPG";            // Hebrews
+  if (n === 66) return "revelation.JPG";         // Revelation
+  if (n >= 59 && n <= 65) return "general_epistles.JPG";  // James–Jude
+  if (n >= 54 && n <= 56) return "pastoral_letters.JPG";  // 1 Timothy, 2 Timothy, Titus
+  return "pauline_letters.JPG";                  // Romans–2 Thess + Philemon
+}
+// Full-screen backdrop that crossfades (1500ms) when the environment changes
+function EnvLayer({ src, parallaxRef }) {
+  const [layers, setLayers] = useState(src ? [{ key: 0, src, on: true }] : []);
+  const idRef = useRef(0);
+  useEffect(() => {
+    if (!src) return;
+    setLayers((ls) => {
+      const last = ls[ls.length - 1];
+      if (last && last.src === src) return ls;                 // already showing it
+      return [...ls.slice(-1), { key: ++idRef.current, src, on: false }];
+    });
+  }, [src]);
+  useEffect(() => {                                            // fade the new layer in
+    const pending = layers.find((l) => !l.on);
+    if (!pending) return;
+    const r = requestAnimationFrame(() => requestAnimationFrame(() =>
+      setLayers((ls) => ls.map((l) => (l.key === pending.key ? { ...l, on: true } : l)))));
+    return () => cancelAnimationFrame(r);
+  }, [layers]);
+  useEffect(() => {                                            // drop the old layer after the fade
+    if (layers.length <= 1) return;
+    const to = setTimeout(() => setLayers((ls) => ls.slice(-1)), 1700);
+    return () => clearTimeout(to);
+  }, [layers]);
+  return (
+    <div ref={parallaxRef} style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
+      transform: "scale(1.16)", willChange: "transform" }}>
+      {layers.map((l, i) => (
+        <div key={l.key} style={{ position: "absolute", inset: 0,
+          backgroundImage: `url("${ENV_BASE}${l.src}")`, backgroundSize: "cover", backgroundPosition: "center",
+          filter: "saturate(0.82)",
+          opacity: (i === layers.length - 1 && l.on) ? ENV_OPACITY : 0,
+          transition: "opacity 1500ms ease" }} />
+      ))}
+    </div>
+  );
+}
+
 function Plaque({ book, focused, onClick, reflection = false }) {
   const ac = accent(book.testament);
   const cat = categoryColor(book.category);
@@ -312,18 +407,8 @@ function Plaque({ book, focused, onClick, reflection = false }) {
                 ? <BookScene number={book.number} focused={focused} />
                 : <div style={{ position: "absolute", inset: 0, background: `linear-gradient(160deg, ${cat}33, #0a0b14 78%)` }} />
             )}
-            {/* real artwork — fades in on load, hidden if the file is missing */}
-            {!imgDead && (
-              <img
-                src={artworkSrc(book)}
-                alt={book.name}
-                loading="lazy"
-                decoding="async"
-                onLoad={() => setImgOk(true)}
-                onError={() => setImgDead(true)}
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: imgOk ? 1 : 0, transition: "opacity 0.45s ease" }}
-              />
-            )}
+            {/* real artwork — tries multiple filenames, fades in on load */}
+            <ArtImg book={book} onLoaded={() => setImgOk(true)} />
 
             {/* App caption — shown on fallback scenes, and on real images only if they
                 don't already carry their own baked-in title */}
@@ -417,7 +502,8 @@ function BookDetail({ book, onClose }) {
   const n = book.chapters || 1;
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 60, overflowY: "auto", WebkitOverflowScrolling: "touch",
+    <div style={{ position: "fixed", inset: 0, zIndex: 60, overflowY: "scroll", WebkitOverflowScrolling: "touch",
+      touchAction: "pan-y", overscrollBehavior: "contain",
       background: "radial-gradient(120% 100% at 50% 0%, #14163a 0%, #090a18 55%, #04050d 100%)",
       color: "#ece9f5", fontFamily: "'Trebuchet MS','Segoe UI',sans-serif" }}>
 
@@ -438,10 +524,7 @@ function BookDetail({ book, onClose }) {
             aspectRatio: "6 / 7", borderRadius: 14, overflow: "hidden",
             border: `1px solid ${ac}55`, boxShadow: "0 12px 44px rgba(0,0,0,0.6)" }}>
             <div style={{ position: "absolute", inset: 0 }}><BookScene number={book.number} focused={true} /></div>
-            <img src={artworkSrc(book)} alt={book.name} onLoad={() => setImgOk(true)}
-              onError={(e) => { e.currentTarget.style.display = "none"; }}
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
-                opacity: imgOk ? 1 : 0, transition: "opacity .4s ease" }} />
+            <ArtImg book={book} onLoaded={() => setImgOk(true)} />
           </div>
 
           <div style={{ textAlign: "center", marginBottom: 4 }}>
@@ -518,6 +601,7 @@ export default function FocusWordBibleWall() {
   const [focusedCol, setFocusedCol] = useState(0);
   const [active, setActive] = useState(OT[0]);
   const [openBook, setOpenBook] = useState(null);
+  useEffect(() => { openRef.current = !!openBook; }, [openBook]);
 
   const pos = useRef(0);        // current position (float book column)
   const vel = useRef(0);        // velocity in columns per frame
@@ -529,6 +613,8 @@ export default function FocusWordBibleWall() {
   const lastT = useRef(0);
   const lastCol = useRef(0);
   const pinned = useRef(false);
+  const openRef = useRef(false);   // true while a book page is open (pause wall gestures)
+  const envRef = useRef(null);     // background environment layer (parallax)
   const mainRef = useRef(null);
   const stripRef = useRef(null);
   const reflRef = useRef(null);
@@ -551,6 +637,8 @@ export default function FocusWordBibleWall() {
   }, []);
   const scale = Math.max(0.42, Math.min(1.15, Math.min(vp.w / 1180, vp.h / 760)));
   const isNarrow = vp.w < 760;
+
+  useEffect(() => { ENV_FILES.forEach((f) => { const im = new Image(); im.src = ENV_BASE + f; }); }, []);
 
   useEffect(() => {
     const MAXC = COLS - 1;
@@ -584,11 +672,22 @@ export default function FocusWordBibleWall() {
       if (stripRef.current) stripRef.current.style.transform = t;
       if (reflRef.current) reflRef.current.style.transform = t;
 
+      // gentle background parallax — moves much slower than the wall (subconscious)
+      if (envRef.current) {
+        const frac = MAXC > 0 ? p / MAXC : 0;
+        const shift = (frac - 0.5) * 40; // about ±20px across the whole wall
+        envRef.current.style.transform = `translate3d(${-shift}px,0,0) scale(1.16)`;
+      }
+
       const col = clamp(Math.round(p));
       if (col !== lastCol.current) {
         lastCol.current = col;
         setFocusedCol(col);
-        if (!pinned.current) setActive(OT[col] || NT[col]);
+        if (!pinned.current) {
+          const b = OT[col] || NT[col];
+          setActive(b);
+          if (b) console.log(`Focused Book: ${b.name}\nEnvironment: ${envFile(b)}`);
+        }
       }
       rafId.current = requestAnimationFrame(tick);
     };
@@ -624,14 +723,15 @@ export default function FocusWordBibleWall() {
     const end = () => { dragging.current = false; };
 
     const onWheel = (e) => {
+      if (openRef.current) return;
       e.preventDefault();
       pinned.current = false; snapTo.current = null;
       vel.current = clampV(vel.current + e.deltaY * WHEEL_IMPULSE);
     };
-    const ts = (e) => begin(e.touches[0].clientX, e.touches[0].clientY);
-    const tm = (e) => { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); };
-    const md = (e) => begin(e.clientX, e.clientY);
-    const mm = (e) => move(e.clientX, e.clientY);
+    const ts = (e) => { if (openRef.current) return; begin(e.touches[0].clientX, e.touches[0].clientY); };
+    const tm = (e) => { if (openRef.current) return; e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); };
+    const md = (e) => { if (openRef.current) return; begin(e.clientX, e.clientY); };
+    const mm = (e) => { if (openRef.current) return; move(e.clientX, e.clientY); };
 
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("touchstart", ts, { passive: false });
@@ -655,6 +755,7 @@ export default function FocusWordBibleWall() {
 
   useEffect(() => {
     const onKey = (e) => {
+      if (openRef.current) return;
       if (e.key === "ArrowRight" || e.key === "ArrowDown") { pinned.current = false; vel.current = 0; snapTo.current = clamp(Math.round(pos.current) + 1); }
       if (e.key === "ArrowLeft" || e.key === "ArrowUp") { pinned.current = false; vel.current = 0; snapTo.current = clamp(Math.round(pos.current) - 1); }
     };
@@ -680,6 +781,7 @@ export default function FocusWordBibleWall() {
   };
 
   return (
+    <>
       <main
         ref={mainRef}
         style={{ position: "fixed", inset: 0, overflow: "hidden", cursor: "grab",
@@ -687,6 +789,12 @@ export default function FocusWordBibleWall() {
           color: "#e8eaf6", fontFamily: "'Trebuchet MS','Segoe UI',sans-serif", userSelect: "none",
           perspective: `${PERSPECTIVE}px`, perspectiveOrigin: "50% 46%", touchAction: "none" }}
       >
+        {/* Sacred Wall environment — cinematic backdrop behind the books */}
+        <EnvLayer src={envFile(active)} parallaxRef={envRef} />
+        <div style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none", background: "rgba(4,4,12,0.42)" }} />
+        <div style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
+          background: "radial-gradient(125% 110% at 50% 42%, transparent 36%, rgba(2,2,8,0.74) 100%)" }} />
+
         <EmblemDefs />
         <div style={{ position: "absolute", top: 20, left: 0, right: 0, textAlign: "center", fontSize: 12, letterSpacing: 7, opacity: 0.45, zIndex: 6, fontFamily: "Georgia, serif" }}>
           T H E &nbsp; S A C R E D &nbsp; A R C H I V E
@@ -746,9 +854,10 @@ export default function FocusWordBibleWall() {
           <Legend color={accent("OT")} label="TOP ROW · OLD TESTAMENT · 39" />
           <Legend color={accent("NT")} label="BOTTOM ROW · NEW TESTAMENT · 27" />
         </div>
-
-        {openBook && <BookDetail book={openBook} onClose={() => setOpenBook(null)} />}
       </main>
+
+      {openBook && <BookDetail book={openBook} onClose={() => setOpenBook(null)} />}
+    </>
   );
 }
 
