@@ -607,6 +607,7 @@ const FRICTION = 0.948; // glide decay per frame (closer to 1 = longer glide)
 const MAX_VEL = 0.85; // top speed cap (books per frame)
 const SNAP = 0.18; // how firmly it settles onto the nearest book
 const STOP_VEL = 0.022; // below this speed, it eases to a rest and snaps
+const LOAD_WINDOW = 7; // how many plaques each side of focus load their image up front
 // ------------------------------------------------------------------------
 
 const OT = BIBLE_BOOKS.filter(b => b.testament === "OT"); // 39
@@ -667,6 +668,8 @@ function candidateSrcs(book) {
   })));
   return out;
 }
+// Remembers the exact image URL that loaded for each book, so reusing it is instant
+const RESOLVED = {};
 function ArtImg({
   book,
   onLoaded,
@@ -682,6 +685,7 @@ function ArtImg({
     loading: "lazy",
     decoding: "async",
     onLoad: () => {
+      RESOLVED[book.number] = cands[i];
       setOk(true);
       if (onLoaded) onLoaded();
     },
@@ -702,6 +706,55 @@ function ArtImg({
 }
 // -------------------------------------------------------------------------
 
+// Brief "the plaque turns to face you" moment, played right before the book card opens
+function FlattenFx({
+  book
+}) {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const r = requestAnimationFrame(() => setOn(true));
+    return () => cancelAnimationFrame(r);
+  }, []);
+  const src = RESOLVED[book.number] || candidateSrcs(book)[0];
+  const cat = categoryColor(book.category);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 55,
+      pointerEvents: "none",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      perspective: "1100px",
+      background: on ? "rgba(3,3,12,0.6)" : "rgba(3,3,12,0)",
+      transition: "background 0.28s ease"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "relative",
+      width: "min(70vw, 300px)",
+      aspectRatio: "6 / 7",
+      borderRadius: 6,
+      overflow: "hidden",
+      border: "1px solid rgba(214,184,112,0.85)",
+      background: `linear-gradient(160deg, ${cat}40, #0a0b14 72%)`,
+      boxShadow: `0 18px 60px -10px #000, 0 0 42px -6px ${cat}`,
+      transformOrigin: "center center",
+      transform: on ? "rotateY(0deg) scale(1)" : "rotateY(-38deg) scale(0.86)",
+      opacity: on ? 1 : 0,
+      transition: "transform 0.32s cubic-bezier(.2,.7,.2,1), opacity 0.2s ease"
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: src,
+    alt: book.name,
+    style: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    }
+  })));
+}
 const STARS = /*#__PURE__*/React.createElement("g", {
   fill: "#fdf3c8"
 }, /*#__PURE__*/React.createElement("circle", {
@@ -3065,7 +3118,8 @@ function Plaque({
   book,
   focused,
   onClick,
-  reflection = false
+  reflection = false,
+  near = true
 }) {
   const ac = accent(book.testament);
   const cat = categoryColor(book.category);
@@ -3113,7 +3167,7 @@ function Plaque({
       inset: 0,
       background: `linear-gradient(160deg, ${cat}33, #0a0b14 78%)`
     }
-  })), /*#__PURE__*/React.createElement(ArtImg, {
+  })), near && /*#__PURE__*/React.createElement(ArtImg, {
     book: book,
     onLoaded: () => setImgOk(true)
   }), !(IMAGE_HAS_OWN_TITLE && imgOk) && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -3225,6 +3279,7 @@ function Shelf({
   }, /*#__PURE__*/React.createElement(Plaque, {
     book: book,
     focused: interactive && c === focusedCol,
+    near: focusedCol < 0 ? false : Math.abs(c - focusedCol) <= LOAD_WINDOW,
     onClick: () => interactive && onPick(book, c),
     reflection: !interactive
   })) : null));
@@ -3965,6 +4020,7 @@ function FocusWordBibleWall() {
   const [focusedCol, setFocusedCol] = useState(0);
   const [active, setActive] = useState(ALL[0]);
   const [openBook, setOpenBook] = useState(null);
+  const [flat, setFlat] = useState(null);
   useEffect(() => {
     openRef.current = !!openBook;
   }, [openBook]);
@@ -4180,7 +4236,9 @@ function FocusWordBibleWall() {
     vel.current = 0;
     setActive(book);
     snapTo.current = clamp(col);
-    setOpenBook(book);
+    setFlat(book); // start the flatten-to-face-you moment
+    setTimeout(() => setOpenBook(book), 300); // card slides in as it finishes
+    setTimeout(() => setFlat(null), 440); // remove the transient (now hidden by the card)
   };
   const ac = accent(active.testament);
   const atmos = categoryColor(active.category); // room mood shifts with the focused book
@@ -4406,7 +4464,9 @@ function FocusWordBibleWall() {
   }), /*#__PURE__*/React.createElement(Legend, {
     color: accent("NT"),
     label: "NEW TESTAMENT \xB7 27 BOOKS"
-  }))), openBook && /*#__PURE__*/React.createElement(BookDetail, {
+  }))), flat && /*#__PURE__*/React.createElement(FlattenFx, {
+    book: flat
+  }), openBook && /*#__PURE__*/React.createElement(BookDetail, {
     book: openBook,
     onClose: () => setOpenBook(null)
   }));
