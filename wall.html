@@ -3640,6 +3640,56 @@ function MapView({
     }
   })))), /*#__PURE__*/React.createElement("div", {
     style: {
+      fontSize: 11,
+      letterSpacing: 2,
+      opacity: 0.55,
+      textTransform: "uppercase",
+      margin: "22px 0 10px"
+    }
+  }, "All chapters \xB7 tap to read"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(52px, 1fr))",
+      gap: 8
+    }
+  }, Array.from({
+    length: book.chapters || 1
+  }, (_, k) => k + 1).map(c => /*#__PURE__*/React.createElement("button", {
+    key: c,
+    onClick: () => {
+      window.scrollTo(0, 0);
+      onChapter(c);
+    },
+    style: {
+      padding: "12px 0",
+      borderRadius: 9,
+      cursor: "pointer",
+      background: "rgba(255,255,255,0.05)",
+      color: "#efe9da",
+      border: `1px solid ${ac}44`,
+      fontSize: 15,
+      fontWeight: 700
+    }
+  }, c))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: 12,
+      padding: "14px 16px",
+      margin: "20px 0 4px",
+      lineHeight: 1.6,
+      fontSize: 15.5
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      letterSpacing: 2,
+      opacity: 0.55,
+      textTransform: "uppercase",
+      marginBottom: 6
+    }
+  }, "About this book"), book.summary), /*#__PURE__*/React.createElement("div", {
+    style: {
       textAlign: "center",
       marginTop: 16
     }
@@ -3651,7 +3701,7 @@ function MapView({
       display: "inline-block",
       padding: "11px 20px"
     }
-  }, "All chapters & about")), spot && /*#__PURE__*/React.createElement("div", {
+  }, "View the book poster")), spot && /*#__PURE__*/React.createElement("div", {
     onClick: () => setSpot(null),
     style: {
       position: "fixed",
