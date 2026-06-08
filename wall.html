@@ -4946,6 +4946,24 @@ function saveHLAll(o) {
 }
 const HL_COLORS = ["#f2c14e", "#48b4ff", "#b07dff", "#46c08a", "#ec6a86"];
 const cleanV = t => String(t).replace(/\s+/g, " ").trim();
+const EMBEDDED = function () {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+}();
+function postToApp(target, text, ref) {
+  try {
+    window.parent.postMessage({
+      source: "focusword-wall",
+      action: "add",
+      target: target,
+      text: text,
+      ref: ref
+    }, window.location.origin);
+  } catch (e) {}
+}
 
 // Loads the actual chapter text live (same source the app uses)
 function ChapterReader({
@@ -4964,6 +4982,9 @@ function ChapterReader({
   const [hl, setHl] = useState([]);
   const [barOpen, setBarOpen] = useState(false);
   const pending = useRef([]);
+  const pendingText = useRef("");
+  const pendingRef = useRef("");
+  const [hlMenu, setHlMenu] = useState(null);
   const boxRef = useRef(null);
   useEffect(() => {
     let alive = true;
@@ -5040,6 +5061,13 @@ function ChapterReader({
         });
       });
       pending.current = out;
+      if (out.length) {
+        pendingText.current = (window.getSelection() + "").replace(/\s+/g, " ").trim();
+        const vs = out.map(r => r.v);
+        const lo = Math.min.apply(null, vs),
+          hi = Math.max.apply(null, vs);
+        pendingRef.current = book.name + " " + chapter + ":" + (lo === hi ? lo : lo + "-" + hi);
+      }
       setBarOpen(out.length > 0);
     };
     document.addEventListener("selectionchange", onSel);
@@ -5073,6 +5101,36 @@ function ChapterReader({
     if (sel) sel.removeAllRanges();
     setBarOpen(false);
   };
+  const sendSel = target => {
+    const text = (pendingText.current || "").trim();
+    if (!text) return;
+    postToApp(target, text, pendingRef.current);
+    const sel = window.getSelection();
+    if (sel) sel.removeAllRanges();
+    setBarOpen(false);
+  };
+  const openHl = id => {
+    const ranges = hl.filter(r => r.id === id);
+    const verses = st.data && st.data.verses || [];
+    const txt = ranges.map(r => {
+      const v = verses.find(x => x.verse === r.v);
+      const t = v ? cleanV(v.text) : "";
+      return t.slice(r.s, r.e);
+    }).join(" ").replace(/\s+/g, " ").trim();
+    const vs = ranges.map(r => r.v);
+    const lo = Math.min.apply(null, vs),
+      hi = Math.max.apply(null, vs);
+    setHlMenu({
+      id: id,
+      text: txt,
+      ref: book.name + " " + chapter + ":" + (lo === hi ? lo : lo + "-" + hi)
+    });
+  };
+  const sendHl = target => {
+    if (!hlMenu) return;
+    postToApp(target, hlMenu.text, hlMenu.ref);
+    setHlMenu(null);
+  };
   const renderVerse = v => {
     const text = cleanV(v.text);
     const ranges = hl.filter(r => r.v === v.verse);
@@ -5103,7 +5161,7 @@ function ChapterReader({
       key: k,
       onClick: e => {
         e.stopPropagation();
-        if (window.confirm("Remove this highlight?")) removeId(sg.m.id);
+        openHl(sg.m.id);
       },
       style: {
         background: sg.m.c,
@@ -5198,7 +5256,105 @@ function ChapterReader({
       window.scrollTo(0, 0);
     },
     style: navStyle(chapter >= total, ac)
-  }, "Next \u203A")), barOpen && /*#__PURE__*/React.createElement("div", {
+  }, "Next \u203A")), hlMenu && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setHlMenu(null),
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 85,
+      background: "rgba(3,3,9,0.62)",
+      display: "flex",
+      alignItems: "flex-end"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      width: "100%",
+      background: "linear-gradient(180deg,#16172f,#0c0c1c)",
+      borderTop: `1px solid ${ac}66`,
+      borderRadius: "16px 16px 0 0",
+      padding: "16px 16px calc(env(safe-area-inset-bottom,0px) + 16px)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: "#d8d2ea",
+      lineHeight: 1.5,
+      marginBottom: 4
+    }
+  }, "\u201C", hlMenu.text, "\u201D"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: ac,
+      marginBottom: 14
+    }
+  }, hlMenu.ref), EMBEDDED && /*#__PURE__*/React.createElement("button", {
+    onClick: () => sendHl("journal"),
+    style: {
+      display: "block",
+      width: "100%",
+      textAlign: "center",
+      padding: 13,
+      marginBottom: 10,
+      borderRadius: 10,
+      background: "rgba(255,255,255,0.05)",
+      border: `1px solid ${ac}55`,
+      color: "#efe9da",
+      fontSize: 15,
+      fontWeight: 700,
+      cursor: "pointer"
+    }
+  }, "\uD83D\uDCD6\xA0 Send to Journal"), EMBEDDED && /*#__PURE__*/React.createElement("button", {
+    onClick: () => sendHl("canvas"),
+    style: {
+      display: "block",
+      width: "100%",
+      textAlign: "center",
+      padding: 13,
+      marginBottom: 10,
+      borderRadius: 10,
+      background: "rgba(255,255,255,0.05)",
+      border: `1px solid ${ac}55`,
+      color: "#efe9da",
+      fontSize: 15,
+      fontWeight: 700,
+      cursor: "pointer"
+    }
+  }, "\uD83C\uDFA8\xA0 Send to Canvas"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      removeId(hlMenu.id);
+      setHlMenu(null);
+    },
+    style: {
+      display: "block",
+      width: "100%",
+      textAlign: "center",
+      padding: 13,
+      marginBottom: 10,
+      borderRadius: 10,
+      background: "rgba(255,255,255,0.05)",
+      border: "1px solid rgba(224,96,126,0.5)",
+      color: "#e0607e",
+      fontSize: 15,
+      fontWeight: 700,
+      cursor: "pointer"
+    }
+  }, "Remove highlight"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setHlMenu(null),
+    style: {
+      display: "block",
+      width: "100%",
+      textAlign: "center",
+      padding: 13,
+      borderRadius: 10,
+      background: "transparent",
+      border: "1px solid rgba(255,255,255,0.15)",
+      color: "#9a93b5",
+      fontSize: 15,
+      fontWeight: 700,
+      cursor: "pointer"
+    }
+  }, "Cancel"))), barOpen && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       left: 0,
@@ -5252,7 +5408,55 @@ function ChapterReader({
       cursor: "pointer",
       color: "#cfc9e0"
     }
-  }, "\u2715")));
+  }, "\u2715"), EMBEDDED && /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: "100%",
+      display: "flex",
+      gap: 10,
+      justifyContent: "center",
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onMouseDown: e => {
+      e.preventDefault();
+      sendSel("journal");
+    },
+    onTouchStart: e => {
+      e.preventDefault();
+      sendSel("journal");
+    },
+    style: {
+      padding: "9px 16px",
+      borderRadius: 9,
+      cursor: "pointer",
+      fontSize: 13,
+      fontWeight: 700,
+      whiteSpace: "nowrap",
+      background: "rgba(255,255,255,0.08)",
+      border: "1px solid rgba(212,184,120,0.55)",
+      color: "#f0e6cf"
+    }
+  }, "\uD83D\uDCD6 To Journal"), /*#__PURE__*/React.createElement("div", {
+    onMouseDown: e => {
+      e.preventDefault();
+      sendSel("canvas");
+    },
+    onTouchStart: e => {
+      e.preventDefault();
+      sendSel("canvas");
+    },
+    style: {
+      padding: "9px 16px",
+      borderRadius: 9,
+      cursor: "pointer",
+      fontSize: 13,
+      fontWeight: 700,
+      whiteSpace: "nowrap",
+      background: "rgba(255,255,255,0.08)",
+      border: "1px solid rgba(212,184,120,0.55)",
+      color: "#f0e6cf"
+    }
+  }, "\uD83C\uDFA8 To Canvas"))));
 }
 function FocusWordBibleWall() {
   const [focusedCol, setFocusedCol] = useState(0);
