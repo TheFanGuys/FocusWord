@@ -655,6 +655,7 @@ function go(tab){
     if(tab==='more') renderMore();
     if(tab==='home') renderHome();
   } else if(tab==='wall'){
+    if(typeof hideReturnPill==='function') hideReturnPill();
     document.getElementById('screen-wall').classList.add('active');
     document.querySelector('.tab[data-tab="home"]').classList.add('active');
     var wf=document.getElementById('wallFrame'); if(wf && !wf.src) wf.src='wall.html?t='+Date.now();
@@ -2216,22 +2217,31 @@ function renameCanvas(id){ const cv=state.canvases.find(c=>c.id===id); const n=p
 function deleteCanvas(id){ if(state.canvases.length<=1){toast('Keep at least one canvas');return;} if(!confirm('Delete this canvas?'))return; state.canvases=state.canvases.filter(c=>c.id!==id); if(state.activeCanvas===id)state.activeCanvas=state.canvases[0].id; save(); closeSheet(); initCanvas(); }
 
 /* ===== Receive highlighted text from the Visual Bible (iframe) ===== */
-var _fwPending=null;
+var _fwPending=null, _fwReturn='';
+function showReturnPill(ref){
+  _fwReturn=ref||'';
+  var p=document.getElementById('fwReturnPill');
+  if(!p){ p=document.createElement('div'); p.id='fwReturnPill'; document.body.appendChild(p); p.onclick=function(){ hideReturnPill(); go('wall'); }; }
+  p.textContent='‹ Back to '+(ref||'reading');
+  p.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 80px);z-index:120;background:linear-gradient(180deg,#2a2350,#171130);color:#f0e6cf;border:1px solid var(--gold);border-radius:22px;padding:11px 20px;font-size:14px;font-weight:700;box-shadow:0 8px 26px rgba(0,0,0,.55);cursor:pointer;max-width:88vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  p.style.display='block';
+}
+function hideReturnPill(){ var p=document.getElementById('fwReturnPill'); if(p)p.style.display='none'; }
 function fwCard(cv){ cv.cards.push({id:'cd'+Date.now(),type:'verse',ref:_fwPending.ref,text:_fwPending.text,x:30+Math.random()*60,y:30+Math.random()*60}); }
 function openCanvasPicker(text,ref){
   _fwPending={text:text,ref:ref};
   var rows=state.canvases.map(function(cv){return '<div class="card tap" onclick="fwToCanvas(\''+cv.id+'\')"><div style="font-weight:700;">'+esc(cv.name)+'</div><div style="font-size:12px;color:var(--text-faint);">'+cv.cards.length+' cards</div></div>';}).join('');
   openSheet('<h3>Add to which canvas?</h3><div style="font-size:13px;color:var(--gold);font-weight:600;margin:2px 0 14px;">'+esc(ref)+'</div>'+rows+'<button class="btn btn-ghost" style="margin-top:10px;" onclick="fwToCanvasNew()">＋ New canvas</button>');
 }
-function fwToCanvas(id){ var cv=state.canvases.find(function(c){return c.id===id;}); if(!cv)return; fwCard(cv); state.activeCanvas=id; save(); closeSheet(); _fwPending=null; go('canvas'); toast('Added to Canvas 🎨'); }
-function fwToCanvasNew(){ var n=prompt('Canvas name:','Untitled Canvas'); if(n===null)return; var cv={id:'c'+Date.now(),name:(n||'Untitled'),cards:[],lines:[],strokes:[]}; state.canvases.push(cv); fwCard(cv); state.activeCanvas=cv.id; save(); closeSheet(); _fwPending=null; go('canvas'); toast('Added to Canvas 🎨'); }
+function fwToCanvas(id){ var cv=state.canvases.find(function(c){return c.id===id;}); if(!cv)return; var ref=_fwPending.ref; fwCard(cv); state.activeCanvas=id; save(); closeSheet(); _fwPending=null; go('canvas'); showReturnPill(ref); toast('Added to Canvas 🎨'); }
+function fwToCanvasNew(){ var n=prompt('Canvas name:','Untitled Canvas'); if(n===null)return; var ref=_fwPending.ref; var cv={id:'c'+Date.now(),name:(n||'Untitled'),cards:[],lines:[],strokes:[]}; state.canvases.push(cv); fwCard(cv); state.activeCanvas=cv.id; save(); closeSheet(); _fwPending=null; go('canvas'); showReturnPill(ref); toast('Added to Canvas 🎨'); }
 function openJournalPicker(text,ref){
   _fwPending={text:text,ref:ref};
   var rows=state.journal.map(function(j){return '<div class="card tap" onclick="fwToJournal(\''+j.id+'\')"><div style="font-weight:700;">'+esc(j.title||'Untitled')+'</div><div style="font-size:12px;color:var(--text-faint);">'+new Date(j.date).toLocaleDateString()+'</div></div>';}).join('');
   openSheet('<h3>Add to which entry?</h3><div style="font-size:13px;color:var(--gold);font-weight:600;margin:2px 0 14px;">'+esc(ref)+'</div>'+(rows||'<div style="font-size:13px;color:var(--text-faint);margin-bottom:10px;">No entries yet.</div>')+'<button class="btn btn-ghost" style="margin-top:10px;" onclick="fwToJournalNew()">＋ New entry</button>');
 }
-function fwToJournal(id){ var j=state.journal.find(function(x){return x.id===id;}); if(!j)return; var snip='“'+_fwPending.text+'” — '+_fwPending.ref; j.body=(j.body?j.body+'\n\n':'')+snip; save(); _fwPending=null; closeSheet(); go('pray'); openJournalEditor(id); toast('Added to Journal 🙏'); }
-function fwToJournalNew(){ var defType=(typeof JTYPES!=='undefined'&&JTYPES.length)?JTYPES[0].n:'Prayer'; var id='j'+Date.now(); var snip='“'+_fwPending.text+'” — '+_fwPending.ref; state.journal.unshift({id:id,type:defType,title:_fwPending.ref,ref:_fwPending.ref,body:snip,date:Date.now()}); save(); _fwPending=null; closeSheet(); go('pray'); openJournalEditor(id); toast('Added to Journal 🙏'); }
+function fwToJournal(id){ var j=state.journal.find(function(x){return x.id===id;}); if(!j)return; var ref=_fwPending.ref; var snip='“'+_fwPending.text+'” — '+_fwPending.ref; j.body=(j.body?j.body+'\n\n':'')+snip; save(); _fwPending=null; closeSheet(); go('pray'); openJournalEditor(id); showReturnPill(ref); toast('Added to Journal 🙏'); }
+function fwToJournalNew(){ var defType=(typeof JTYPES!=='undefined'&&JTYPES.length)?JTYPES[0].n:'Prayer'; var id='j'+Date.now(); var ref=_fwPending.ref; var snip='“'+_fwPending.text+'” — '+_fwPending.ref; state.journal.unshift({id:id,type:defType,title:_fwPending.ref,ref:_fwPending.ref,body:snip,date:Date.now()}); save(); _fwPending=null; closeSheet(); go('pray'); openJournalEditor(id); showReturnPill(ref); toast('Added to Journal 🙏'); }
 window.addEventListener('message',function(e){
   try{
     if(e.origin!==location.origin)return;
