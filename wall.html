@@ -4369,6 +4369,135 @@ function mapCandidates(file) {
 }
 
 // Full visual map: tap a glowing point -> floating card of that section's chapters
+// Full-screen pinch-to-zoom / drag viewer for any image
+function ZoomViewer({
+  src,
+  onClose
+}) {
+  const [t, setT] = useState({
+    s: 1,
+    x: 0,
+    y: 0
+  });
+  const g = useRef({});
+  const lastTap = useRef(0);
+  const dist = touches => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+  const onStart = e => {
+    if (e.touches.length === 2) {
+      g.current = {
+        mode: "pinch",
+        d0: dist(e.touches),
+        s0: t.s
+      };
+    } else if (e.touches.length === 1) {
+      const now = Date.now();
+      if (now - lastTap.current < 280) {
+        setT(p => p.s > 1 ? {
+          s: 1,
+          x: 0,
+          y: 0
+        } : {
+          s: 2.5,
+          x: 0,
+          y: 0
+        });
+        lastTap.current = 0;
+        g.current = {};
+        return;
+      }
+      lastTap.current = now;
+      g.current = {
+        mode: "pan",
+        x0: e.touches[0].clientX,
+        y0: e.touches[0].clientY,
+        tx0: t.x,
+        ty0: t.y
+      };
+    }
+  };
+  const onMove = e => {
+    if (!g.current.mode) return;
+    e.preventDefault();
+    if (g.current.mode === "pinch" && e.touches.length === 2) {
+      const s = Math.max(1, Math.min(5, g.current.s0 * (dist(e.touches) / g.current.d0)));
+      setT(p => ({
+        ...p,
+        s
+      }));
+    } else if (g.current.mode === "pan" && e.touches.length === 1 && t.s > 1) {
+      setT(p => ({
+        ...p,
+        x: g.current.tx0 + (e.touches[0].clientX - g.current.x0),
+        y: g.current.ty0 + (e.touches[0].clientY - g.current.y0)
+      }));
+    }
+  };
+  const onEnd = e => {
+    g.current = {};
+    if (e.touches.length === 0) setT(p => p.s <= 1 ? {
+      s: 1,
+      x: 0,
+      y: 0
+    } : p);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    onTouchStart: onStart,
+    onTouchMove: onMove,
+    onTouchEnd: onEnd,
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 90,
+      background: "rgba(0,0,0,0.96)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      touchAction: "none"
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: src,
+    alt: "Full map",
+    draggable: false,
+    style: {
+      maxWidth: "100%",
+      maxHeight: "100%",
+      transform: `translate(${t.x}px, ${t.y}px) scale(${t.s})`,
+      transformOrigin: "center center",
+      transition: g.current.mode ? "none" : "transform .18s ease",
+      willChange: "transform",
+      userSelect: "none"
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    "aria-label": "Close",
+    style: {
+      position: "fixed",
+      top: "calc(env(safe-area-inset-top,0px) + 10px)",
+      right: 14,
+      zIndex: 91,
+      width: 42,
+      height: 42,
+      borderRadius: "50%",
+      border: "1px solid rgba(255,255,255,0.4)",
+      background: "rgba(20,20,30,0.85)",
+      color: "#fff",
+      fontSize: 24,
+      cursor: "pointer"
+    }
+  }, "\xD7"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      bottom: "calc(env(safe-area-inset-bottom,0px) + 14px)",
+      left: 0,
+      right: 0,
+      textAlign: "center",
+      color: "rgba(255,255,255,0.6)",
+      fontSize: 12,
+      pointerEvents: "none"
+    }
+  }, "Pinch to zoom \xB7 drag to move \xB7 double-tap to reset"));
+}
 function MapView({
   book,
   map,
@@ -4377,6 +4506,7 @@ function MapView({
   onList
 }) {
   const [spot, setSpot] = useState(null);
+  const [zoom, setZoom] = useState(false);
   const [i, setI] = useState(0);
   const [ok, setOk] = useState(false);
   const cands = mapCandidates(map.file);
@@ -4469,6 +4599,23 @@ function MapView({
       animation: "fwpulse 1.9s ease-in-out infinite"
     }
   })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setZoom(true),
+    disabled: !ok,
+    style: {
+      ...navStyle(!ok, ac),
+      flex: "none",
+      display: "inline-block",
+      padding: "10px 18px"
+    }
+  }, "\uD83D\uDD0D Zoom the full map")), zoom && src && /*#__PURE__*/React.createElement(ZoomViewer, {
+    src: src,
+    onClose: () => setZoom(false)
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       letterSpacing: 2,
