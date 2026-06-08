@@ -2084,6 +2084,7 @@ function _strokePts(s){ return Array.isArray(s)?s:(s&&s.pts)||[]; }
 function _strokeColor(s){ return Array.isArray(s)?'#13a3cc':(s.color||'#13a3cc'); }
 function _strokeTool(s){ return Array.isArray(s)?'pen':(s.tool||'pen'); }
 function _paintStroke(ctx,pts,color,tool){ if(!pts.length)return; const ts=_toolStyle(tool); ctx.save(); ctx.globalAlpha=ts.a; ctx.strokeStyle=color; ctx.lineWidth=ts.w; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke(); ctx.restore(); }
+function _eraseFromStroke(s,pt,rad){ const pts=_strokePts(s); const segs=[]; let cur=[]; for(let i=0;i<pts.length;i++){ const p=pts[i]; if(Math.hypot(p.x-pt.x,p.y-pt.y)<rad){ if(cur.length>1)segs.push(cur); cur=[]; } else cur.push(p); } if(cur.length>1)segs.push(cur); const kept=segs.reduce((n,a)=>n+a.length,0); return {removed:kept<pts.length, segs:segs}; }
 function getCanvas(){
   if(!state.activeCanvas || !state.canvases.find(c=>c.id===state.activeCanvas)){
     if(!state.canvases.length){ state.canvases.push({id:'c'+Date.now(),name:'My First Canvas',cards:[],lines:[],strokes:[]}); }
@@ -2318,14 +2319,15 @@ function toggleConnect(){
 }
 
 /* ===== Eraser ===== */
-let _eraseHandlers=null;
+let _eraseHandlers=null, _eraseDirty=false;
 function eraseOff(){
   const dl=document.getElementById('drawLayer'), cardLayer=document.getElementById('cardLayer');
   if(_eraseHandlers){
-    dl.removeEventListener('touchstart',_eraseHandlers.e); dl.removeEventListener('touchmove',_eraseHandlers.e);
+    dl.removeEventListener('touchstart',_eraseHandlers.e); dl.removeEventListener('touchmove',_eraseHandlers.e); dl.removeEventListener('touchend',_eraseHandlers.te); dl.removeEventListener('touchcancel',_eraseHandlers.te);
     dl.removeEventListener('mousedown',_eraseHandlers.md); dl.removeEventListener('mousemove',_eraseHandlers.mm); dl.removeEventListener('mouseup',_eraseHandlers.mu);
     _eraseHandlers=null;
   }
+  if(_eraseDirty){ save(); _eraseDirty=false; }
   dl.style.pointerEvents='none'; dl.style.zIndex='1'; if(cardLayer) cardLayer.style.pointerEvents='auto';
   const pill=document.getElementById('erasePill'); if(pill)pill.classList.remove('active');
 }
@@ -2339,17 +2341,19 @@ function toggleErase(){
   dl.style.pointerEvents='auto'; dl.style.zIndex='5'; dl.style.touchAction='none';
   if(cardLayer) cardLayer.style.pointerEvents='none';
   const pos=e=>{ const r=dl.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; const v=getView(); return {x:(p.clientX-r.left-v.x)/v.z,y:(p.clientY-r.top-v.y)/v.z}; };
-  const doErase=pt=>{ const cv=getCanvas(); if(!cv.strokes||!cv.strokes.length)return; const before=cv.strokes.length; const rad=20/getView().z;
-    cv.strokes=cv.strokes.filter(s=>!_strokePts(s).some(p=>Math.hypot(p.x-pt.x,p.y-pt.y)<rad)); if(cv.strokes.length!==before){ redrawStrokes(); save(); } };
+  const doErase=pt=>{ const cv=getCanvas(); if(!cv.strokes||!cv.strokes.length)return; const rad=16/getView().z; let changed=false; const next=[];
+    cv.strokes.forEach(s=>{ const r=_eraseFromStroke(s,pt,rad); if(r.removed){ changed=true; const tool=_strokeTool(s), color=_strokeColor(s); r.segs.forEach(seg=>next.push({pts:seg,tool:tool,color:color})); } else { next.push(s); } });
+    if(changed){ cv.strokes=next; redrawStrokes(); _eraseDirty=true; } };
   let md=false;
   const e=ev=>{ doErase(pos(ev)); ev.preventDefault(); ev.stopPropagation(); };
+  const te=()=>{ if(_eraseDirty){ save(); _eraseDirty=false; } };
   const mdfn=ev=>{ md=true; doErase(pos(ev)); };
   const mm=ev=>{ if(md)doErase(pos(ev)); };
-  const mu=()=>{ md=false; };
-  dl.addEventListener('touchstart',e,{passive:false}); dl.addEventListener('touchmove',e,{passive:false});
+  const mu=()=>{ md=false; if(_eraseDirty){ save(); _eraseDirty=false; } };
+  dl.addEventListener('touchstart',e,{passive:false}); dl.addEventListener('touchmove',e,{passive:false}); dl.addEventListener('touchend',te); dl.addEventListener('touchcancel',te);
   dl.addEventListener('mousedown',mdfn); dl.addEventListener('mousemove',mm); dl.addEventListener('mouseup',mu);
-  _eraseHandlers={e,md:mdfn,mm,mu};
-  toast('🧽 Eraser on — drag over a drawing to erase it');
+  _eraseHandlers={e,te,md:mdfn,mm,mu};
+  toast('🧽 Eraser on — rub over part of a drawing to erase it');
 }
 
 /* ===== Add menu (Note / Verse / Photo / Shapes / Stickers) ===== */
