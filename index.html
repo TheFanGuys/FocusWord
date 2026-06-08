@@ -75,6 +75,9 @@ body{
 .screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;display:none;padding-bottom:30px;}
 #screen-canvas.active{display:flex;flex-direction:column;overflow:hidden;padding-bottom:0;}
 #screen-canvas #canvasStage,#screen-canvas #drawLayer,#screen-canvas #cardLayer{touch-action:none;}
+.cv-card .cv-h{display:none;}
+.cv-card.sel .cv-h{display:block;}
+.cv-card.sel{box-shadow:0 0 0 2px #4fd1c5, 0 6px 18px rgba(0,0,0,.5) !important;}
 .screen.active{display:block;animation:fadeUp .4s ease;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
 .pad{padding:18px;}
@@ -440,7 +443,7 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
       <button class="pill" id="connectPill" onclick="toggleConnect()">🔗 Connect</button>
       <button class="pill" onclick="openExportSheet()">⬇ Export</button>
     </div>
-    <div id="canvasName" style="padding:0 18px 6px;font-size:13px;color:var(--text-faint);font-weight:600;"></div>
+    <div id="canvasName" onclick="openCanvasMenu()" style="padding:0 18px 6px;font-size:13px;color:var(--text-faint);font-weight:600;cursor:pointer;"></div>
     <div id="canvasStage" style="flex:1;position:relative;overflow:hidden;margin:0 8px 8px;border-radius:16px;border:1px solid var(--border);background:var(--bg2);touch-action:none;">
       <canvas id="drawLayer" style="position:absolute;inset:0;z-index:1;pointer-events:none;"></canvas>
       <div id="cvWorld" style="position:absolute;left:0;top:0;width:4000px;height:4000px;transform-origin:0 0;z-index:2;">
@@ -454,6 +457,7 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
         <button class="iconbtn" style="width:30px;height:30px;font-size:14px;" onclick="fitView()" title="Fit">⊡</button>
       </div>
       <div id="drawBar" style="display:none;position:absolute;left:8px;right:8px;bottom:8px;z-index:9;background:rgba(20,16,40,.94);border:1px solid var(--border);border-radius:14px;padding:8px 10px;box-shadow:0 6px 20px rgba(0,0,0,.5);"></div>
+      <div id="objBar" style="display:none;position:absolute;left:8px;right:8px;bottom:8px;z-index:9;background:rgba(20,16,40,.94);border:1px solid var(--teal);border-radius:14px;padding:8px 10px;box-shadow:0 6px 20px rgba(0,0,0,.5);"></div>
     </div>
   </div>
 
@@ -2084,6 +2088,7 @@ function openSettings(){
 let drawMode=false, connectMode=false, connectFrom=null, drawing=false, dctx=null, eraseMode=false;
 let _shapeColor='#e0b659', _shapeFill=false, _lastShapeGroup='basic';
 let drawTool='pen', drawColor='#13a3cc';
+let eraseSize=18;
 const DRAW_COLORS=['#13a3cc','#e0b659','#b07dff','#e0607e','#6fcf97','#f2994a','#f0e6cf'];
 const DRAW_TOOLS=[['pen','✒ Pen'],['marker','🖊 Marker'],['highlighter','🖍 Highlighter']];
 function _toolStyle(tool){ if(tool==='marker')return {w:10,a:0.95}; if(tool==='highlighter')return {w:22,a:0.30}; return {w:3,a:1}; }
@@ -2116,29 +2121,93 @@ function fitView(){
   v.x=(cw-bw*z)/2 - b.minX*z; v.y=(ch-bh*z)/2 - b.minY*z;
   applyView(); updateZoomLabel(); save();
 }
-let _pzReady=false;
+let _pzReady=false, selectedId=null, _multiTouch=false, pinchCandidate=null;
+function cardEl(id){ return document.querySelector('.cv-card[data-id="'+id+'"]'); }
+function cardIdFromEl(t){ const stage=document.getElementById('canvasStage'); while(t&&t!==stage){ if(t.classList&&t.classList.contains('cv-card'))return t.dataset.id; t=t.parentNode; } return null; }
+function selectCard(id){
+  selectedId=id;
+  document.querySelectorAll('.cv-card').forEach(e=>e.classList.toggle('sel', e.dataset.id===id));
+  const bar=document.getElementById('objBar'); if(bar){ renderObjBar(); bar.style.display='block'; }
+}
+function deselectCard(){
+  selectedId=null;
+  document.querySelectorAll('.cv-card.sel').forEach(e=>e.classList.remove('sel'));
+  const bar=document.getElementById('objBar'); if(bar) bar.style.display='none';
+}
+function renderObjBar(){
+  const bar=document.getElementById('objBar'); if(!bar)return;
+  bar.innerHTML='<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'+
+    '<button class="pill" onclick="editSelected()">✎ Edit</button>'+
+    '<button class="pill" onclick="duplicateSelected()">⧉ Copy</button>'+
+    '<button class="pill" style="color:#e0607e;" onclick="deleteSelected()">🗑 Delete</button>'+
+    '<button class="pill" onclick="deselectCard()">✓ Done</button></div>';
+}
+function openEditorFor(card){ if(!card)return; if(card.type==='note')openNoteEdit(card); else if(card.type==='verse')openVerseCardMenu(card); else openTransformPanel(card); }
+function editSelected(){ openEditorFor(_findCard(selectedId)); }
+function duplicateSelected(){ duplicateCard(selectedId); }
+function deleteSelected(){ const id=selectedId; deselectCard(); if(id)deleteCard(id); }
+function duplicateCard(id){ const c=_findCard(id); if(!c)return; const copy=JSON.parse(JSON.stringify(c)); copy.id='cd'+Date.now()+Math.floor(Math.random()*999); copy.x=(c.x||0)+24; copy.y=(c.y||0)+24; getCanvas().cards.push(copy); save(); renderCanvas(); selectCard(copy.id); toast('Copied'); }
 function initPanZoom(){
   const stage=document.getElementById('canvasStage'); if(!stage||_pzReady)return; _pzReady=true;
   const hasTouch=('ontouchstart' in window);
   let mode=null, sx=0,sy=0, d0=0,z0=1, wpx=0,wpy=0;
+  let oD0=0,oA0=0,oRot0=0,oW0=0,oH0=0,oSize0=0,oX0=0,oY0=0,oCx0=0,oCy0=0,oId=null,_objDirty=false;
   const rect=()=>stage.getBoundingClientRect();
-  const onCard=t=>{ while(t&&t!==stage){ if(t.classList&&t.classList.contains('cv-card'))return true; t=t.parentNode; } return false; };
+  const isUI=t=>t&&t.closest&&t.closest('#objBar,#drawBar,#zoomCtl');
+  const cen=(a,b,r)=>({x:((a.clientX+b.clientX)/2)-r.left, y:((a.clientY+b.clientY)/2)-r.top});
+  const startObj=(id,a,b)=>{
+    const c=_findCard(id); if(!c)return false; selectCard(id); oId=id;
+    const r=rect(); oD0=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)||1; oA0=Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX);
+    oRot0=c.rot||0; oW0=c.w||120; oH0=c.h||120; oSize0=c.size||72; oX0=c.x||0; oY0=c.y||0;
+    const m=cen(a,b,r); oCx0=m.x; oCy0=m.y; return true;
+  };
+  const moveObj=(a,b)=>{
+    const c=_findCard(oId); if(!c)return; const r=rect(); const z=getView().z;
+    const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY); const k=d/oD0;
+    const ang=Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX);
+    const m=cen(a,b,r);
+    c.x=oX0+(m.x-oCx0)/z; c.y=oY0+(m.y-oCy0)/z;
+    if(c.type==='sticker'){ c.size=Math.max(28,Math.round(oSize0*k)); }
+    else if(c.type==='image'||c.type==='shape'){ c.w=Math.max(30,Math.round(oW0*k)); c.h=Math.max(30,Math.round(oH0*k)); }
+    else { c.w=Math.max(90,Math.round(oW0*k)); }
+    c.rot=Math.round(oRot0+(ang-oA0)*180/Math.PI);
+    const el=cardEl(oId); if(el){ el.style.left=c.x+'px'; el.style.top=c.y+'px'; applySize(el,c); applyTransform(el,c); }
+    drawLines(); _objDirty=true;
+  };
   const ts=e=>{
-    if(drawMode||eraseMode)return;
-    if(e.touches.length===2){ const a=e.touches[0],b=e.touches[1]; const v=getView(); const r=rect(); mode='zoom'; d0=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)||1; z0=v.z; const mx=((a.clientX+b.clientX)/2)-r.left, my=((a.clientY+b.clientY)/2)-r.top; wpx=(mx-v.x)/v.z; wpy=(my-v.y)/v.z; e.preventDefault(); }
-    else if(e.touches.length===1){ if(onCard(e.target))return; const v=getView(); mode='pan'; sx=e.touches[0].clientX-v.x; sy=e.touches[0].clientY-v.y; e.preventDefault(); }
+    if(drawMode||eraseMode)return; if(isUI(e.target))return;
+    if(e.touches.length===1){
+      _multiTouch=false;
+      const cid=cardIdFromEl(e.target);
+      pinchCandidate=cid;
+      if(cid)return;                         // a card / handle handles its own 1-finger move
+      deselectCard();                        // tapped empty space -> lock in
+      const v=getView(); mode='pan'; sx=e.touches[0].clientX-v.x; sy=e.touches[0].clientY-v.y; e.preventDefault();
+    } else if(e.touches.length===2){
+      _multiTouch=true;
+      const a=e.touches[0],b=e.touches[1];
+      const cid=pinchCandidate||cardIdFromEl(e.target);
+      if(cid && startObj(cid,a,b)){ mode='obj'; e.preventDefault(); }
+      else { const v=getView(); const r=rect(); mode='zoom'; d0=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)||1; z0=v.z; const m=cen(a,b,r); wpx=(m.x-v.x)/v.z; wpy=(m.y-v.y)/v.z; e.preventDefault(); }
+    }
   };
   const tm=e=>{
     if(!mode)return;
     if(mode==='pan'&&e.touches.length===1){ const v=getView(); v.x=e.touches[0].clientX-sx; v.y=e.touches[0].clientY-sy; applyView(); e.preventDefault(); }
-    else if(mode==='zoom'&&e.touches.length>=2){ const a=e.touches[0],b=e.touches[1]; const r=rect(); const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY); const cmx=((a.clientX+b.clientX)/2)-r.left, cmy=((a.clientY+b.clientY)/2)-r.top; const v=getView(); v.z=clampZoom(z0*(d/d0)); v.x=cmx-wpx*v.z; v.y=cmy-wpy*v.z; applyView(); updateZoomLabel(); e.preventDefault(); }
+    else if(mode==='obj'&&e.touches.length>=2){ moveObj(e.touches[0],e.touches[1]); e.preventDefault(); }
+    else if(mode==='zoom'&&e.touches.length>=2){ const a=e.touches[0],b=e.touches[1]; const r=rect(); const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY); const m=cen(a,b,r); const v=getView(); v.z=clampZoom(z0*(d/d0)); v.x=m.x-wpx*v.z; v.y=m.y-wpy*v.z; applyView(); updateZoomLabel(); e.preventDefault(); }
   };
-  const te=()=>{ if(mode){ mode=null; save(); updateZoomLabel(); } };
+  const te=e=>{
+    if(e.touches&&e.touches.length>0)return;   // wait until all fingers are up
+    if(mode==='obj'){ if(_objDirty){ save(); _objDirty=false; } }
+    else if(mode==='zoom'||mode==='pan'){ save(); updateZoomLabel(); }
+    mode=null; oId=null; pinchCandidate=null;
+  };
   stage.addEventListener('touchstart',ts,{passive:false});
   stage.addEventListener('touchmove',tm,{passive:false});
   stage.addEventListener('touchend',te); stage.addEventListener('touchcancel',te);
   if(!hasTouch){
-    stage.addEventListener('mousedown',e=>{ if(drawMode||eraseMode||onCard(e.target))return; const v=getView(); mode='pan'; sx=e.clientX-v.x; sy=e.clientY-v.y; });
+    stage.addEventListener('mousedown',e=>{ if(drawMode||eraseMode||isUI(e.target))return; if(cardIdFromEl(e.target))return; deselectCard(); const v=getView(); mode='pan'; sx=e.clientX-v.x; sy=e.clientY-v.y; });
     window.addEventListener('mousemove',e=>{ if(mode==='pan'){ const v=getView(); v.x=e.clientX-sx; v.y=e.clientY-sy; applyView(); } });
     window.addEventListener('mouseup',()=>{ if(mode==='pan'){ mode=null; save(); } });
   }
@@ -2152,10 +2221,11 @@ function getContentBounds(cv){ let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9,has=fal
 }
 function initCanvas(){
   const cv=getCanvas();
-  document.getElementById('canvasName').textContent='📋 '+cv.name;
+  document.getElementById('canvasName').textContent='📋 '+cv.name+'   ▾ switch / delete';
   const dl=document.getElementById('drawLayer'), stage=document.getElementById('canvasStage');
   applyCanvasBg();
   initPanZoom();
+  deselectCard();
   // Size the canvas once layout has settled. requestAnimationFrame is more reliable than a fixed timeout.
   const sizeIt=()=>{
     const w=stage.clientWidth, h=stage.clientHeight;
@@ -2198,7 +2268,7 @@ function renderCanvas(){
       el.style.cssText=base+'width:'+sz.w+'px;height:'+sz.h+'px;display:flex;align-items:center;justify-content:center;font-size:'+Math.round(sz.w*0.8)+'px;line-height:1;';
       el.textContent=card.glyph||'⭐';
     } else { return; }
-    const del=document.createElement('div'); del.textContent='✕';
+    const del=document.createElement('div'); del.textContent='✕'; del.className='cv-h';
     del.style.cssText='position:absolute;top:-9px;right:-9px;width:22px;height:22px;border-radius:50%;background:#e0607e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:7;cursor:pointer;';
     del.addEventListener('mousedown',ev=>ev.stopPropagation());
     del.addEventListener('touchstart',ev=>ev.stopPropagation(),{passive:true});
@@ -2206,24 +2276,38 @@ function renderCanvas(){
     el.appendChild(del);
     makeDraggable(el,card);
     addResizeHandle(el,card);
+    addRotateHandle(el,card);
+    applyTransform(el,card);
     layer.appendChild(el);
   });
   drawLines();
   redrawStrokes();
   const cl=document.getElementById('cardLayer'); if(cl) cl.style.pointerEvents=(drawMode||eraseMode)?'none':'auto';
+  if(selectedId){ const ex=(cv.cards||[]).some(c=>c.id===selectedId); if(ex){ const se=cardEl(selectedId); if(se)se.classList.add('sel'); } else { deselectCard(); } }
 }
+function selectLast(){ const cs=getCanvas().cards; if(cs&&cs.length) selectCard(cs[cs.length-1].id); }
+function applyTransform(el,card){
+  const rot=card.rot||0, sx=card.sx||0, sy=card.sy||0, fx=card.fx||1, fy=card.fy||1;
+  el.style.transformOrigin='center center';
+  el.style.transform='rotate('+rot+'deg) skewX('+sx+'deg) skewY('+sy+'deg) scale('+fx+','+fy+')';
+}
+function updateCardEl(c){ const el=document.querySelector('.cv-card[data-id="'+c.id+'"]'); if(el){ applyTransform(el,c); applySize(el,c); } }
+let _saveT=null; function saveSoon(){ clearTimeout(_saveT); _saveT=setTimeout(save,250); }
 function addResizeHandle(el,card){
-  const h=document.createElement('div');
+  const h=document.createElement('div'); h.className='cv-h';
   h.style.cssText='position:absolute;right:-8px;bottom:-8px;width:22px;height:22px;border-radius:50%;background:var(--gold);border:2px solid var(--bg2);z-index:7;cursor:nwse-resize;touch-action:none;';
   const down=e=>{
     e.preventDefault(); e.stopPropagation();
     const p=e.touches?e.touches[0]:e; const sx=p.clientX, sy=p.clientY;
     const sw=(card.type==='sticker')?(card.size||72):(card.w||el.offsetWidth);
     const sh=(card.type==='image'||card.type==='shape')?(card.h||el.offsetHeight):0;
+    const r=(card.rot||0)*Math.PI/180, cosr=Math.cos(r), sinr=Math.sin(r);
     const move=ev=>{ const q=ev.touches?ev.touches[0]:ev; const z=getView().z; const dx=(q.clientX-sx)/z, dy=(q.clientY-sy)/z;
-      if(card.type==='sticker'){ card.size=Math.max(32,Math.round(sw+Math.max(dx,dy))); }
-      else if(card.type==='image'||card.type==='shape'){ card.w=Math.max(44,Math.round(sw+dx)); card.h=Math.max(44,Math.round(sh+dy)); }
-      else { card.w=Math.max(110,Math.round(sw+dx)); }
+      // project the drag into the element's own (un-rotated) axes so resize feels right at any angle
+      const lx=dx*cosr+dy*sinr, ly=-dx*sinr+dy*cosr;
+      if(card.type==='sticker'){ card.size=Math.max(32,Math.round(sw+Math.max(lx,ly))); }
+      else if(card.type==='image'||card.type==='shape'){ card.w=Math.max(40,Math.round(sw+lx)); card.h=Math.max(40,Math.round(sh+ly)); }
+      else { card.w=Math.max(110,Math.round(sw+lx)); }
       applySize(el,card); ev.preventDefault(); };
     const up=()=>{ document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up); save(); };
     document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
@@ -2232,6 +2316,41 @@ function addResizeHandle(el,card){
   h.addEventListener('mousedown',down); h.addEventListener('touchstart',down,{passive:false});
   el.appendChild(h);
 }
+function addRotateHandle(el,card){
+  const h=document.createElement('div'); h.className='cv-h';
+  h.style.cssText='position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;background:#4fd1c5;border:2px solid var(--bg2);z-index:7;cursor:grab;touch-action:none;box-shadow:0 0 0 4px rgba(79,209,197,0.15);';
+  const down=e=>{
+    e.preventDefault(); e.stopPropagation();
+    const rect=el.getBoundingClientRect(); const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+    const p=e.touches?e.touches[0]:e;
+    const start=Math.atan2(p.clientY-cy,p.clientX-cx); const rot0=card.rot||0;
+    const move=ev=>{ const q=ev.touches?ev.touches[0]:ev; const a=Math.atan2(q.clientY-cy,q.clientX-cx);
+      card.rot=Math.round(rot0+(a-start)*180/Math.PI); applyTransform(el,card); ev.preventDefault(); };
+    const up=()=>{ document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up); save(); };
+    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    document.addEventListener('touchmove',move,{passive:false});document.addEventListener('touchend',up);
+  };
+  h.addEventListener('mousedown',down); h.addEventListener('touchstart',down,{passive:false});
+  el.appendChild(h);
+}
+function openTransformPanel(card){
+  const row=(label,field,min,max)=>{ const v=Math.round(card[field]||0); return '<label style="display:block;font-size:13px;margin:12px 0 4px;font-weight:600;">'+label+': <span id="tv_'+field+'">'+v+'</span>\u00b0</label><input type="range" min="'+min+'" max="'+max+'" value="'+v+'" oninput="setTransformField(\''+card.id+'\',\''+field+'\',this.value)" style="width:100%;">'; };
+  let html='<h3>🎛️ Transform</h3>';
+  html+=row('Rotate','rot',-180,180);
+  html+=row('Skew sideways','sx',-60,60);
+  html+=row('Skew up / down','sy',-60,60);
+  html+='<div style="display:flex;gap:8px;margin-top:16px;">'+
+    '<button class="btn btn-ghost btn-sm" style="margin:0;flex:1;" onclick="flipCard(\''+card.id+'\',\'x\')">↔ Flip</button>'+
+    '<button class="btn btn-ghost btn-sm" style="margin:0;flex:1;" onclick="flipCard(\''+card.id+'\',\'y\')">↕ Flip</button>'+
+    '<button class="btn btn-ghost btn-sm" style="margin:0;flex:1;" onclick="resetTransform(\''+card.id+'\')">↺ Reset</button>'+
+  '</div>';
+  html+='<div style="font-size:12px;color:var(--text-faint);margin-top:14px;line-height:1.6;">On the canvas: drag to move, the gold dot to scale, and the teal knob on top to spin it.</div>';
+  html+='<button class="btn btn-ghost" style="margin-top:14px;color:#e0607e;" onclick="deleteCard(\''+card.id+'\');closeSheet();">🗑 Delete</button>';
+  openSheet(html);
+}
+function setTransformField(id,f,v){ const c=_findCard(id); if(!c)return; c[f]=parseFloat(v)||0; const lbl=document.getElementById('tv_'+f); if(lbl)lbl.textContent=Math.round(c[f]); updateCardEl(c); saveSoon(); }
+function flipCard(id,axis){ const c=_findCard(id); if(!c)return; if(axis==='x')c.fx=(c.fx===-1?1:-1); else c.fy=(c.fy===-1?1:-1); updateCardEl(c); save(); }
+function resetTransform(id){ const c=_findCard(id); if(!c)return; c.rot=0;c.sx=0;c.sy=0;c.fx=1;c.fy=1; updateCardEl(c); save(); openTransformPanel(c); }
 function makeDraggable(el,card){
   let sx,sy,ox,oy,moved;
   const down=e=>{
@@ -2239,8 +2358,8 @@ function makeDraggable(el,card){
     const p=e.touches?e.touches[0]:e;
     if(connectMode){ handleConnect(card.id); return; }
     moved=false; sx=p.clientX; sy=p.clientY; ox=card.x; oy=card.y; el.style.cursor='grabbing'; el.style.zIndex=10;
-    const move=ev=>{ if(ev.touches&&ev.touches.length>1)return; const q=ev.touches?ev.touches[0]:ev; const z=getView().z; moved=true; card.x=ox+(q.clientX-sx)/z; card.y=oy+(q.clientY-sy)/z; el.style.left=card.x+'px'; el.style.top=card.y+'px'; drawLines(); ev.preventDefault(); };
-    const up=()=>{ el.style.cursor='grab'; el.style.zIndex=4; document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up); if(moved)save(); else onCardTap(card); };
+    const move=ev=>{ if(ev.touches&&ev.touches.length>1)return; const q=ev.touches?ev.touches[0]:ev; const z=getView().z; if(!moved&&selectedId!==card.id)selectCard(card.id); moved=true; card.x=ox+(q.clientX-sx)/z; card.y=oy+(q.clientY-sy)/z; el.style.left=card.x+'px'; el.style.top=card.y+'px'; drawLines(); ev.preventDefault(); };
+    const up=()=>{ el.style.cursor='grab'; el.style.zIndex=4; document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up); if(moved)save(); else if(!_multiTouch)onCardTap(card); };
     document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
     document.addEventListener('touchmove',move,{passive:false});document.addEventListener('touchend',up);
   };
@@ -2279,7 +2398,7 @@ function setDrawTool(t){ drawTool=t; renderDrawBar(); }
 function setDrawColor(c){ drawColor=c; renderDrawBar(); }
 let _drawHandlers=null;
 function toggleDraw(){
-  drawMode=!drawMode; if(connectMode)toggleConnect(); if(eraseMode){eraseMode=false;eraseOff();}
+  drawMode=!drawMode; if(connectMode)toggleConnect(); if(eraseMode){eraseMode=false;eraseOff();} if(typeof deselectCard==='function')deselectCard();
   document.getElementById('drawPill').classList.toggle('active',drawMode);
   const dl=document.getElementById('drawLayer');
   const cardLayer=document.getElementById('cardLayer');
@@ -2327,14 +2446,26 @@ function toggleConnect(){
 
 /* ===== Eraser ===== */
 let _eraseHandlers=null, _eraseDirty=false;
+const ERASE_SIZES=[['Small',9],['Medium',18],['Large',34],['Huge',55]];
+function setEraseSize(v){ eraseSize=v; renderEraseBar(); }
+function renderEraseBar(){
+  const bar=document.getElementById('drawBar'); if(!bar)return;
+  const btns=ERASE_SIZES.map(s=>{ const d=Math.round(Math.min(26,Math.max(10,s[1]/1.5))); return '<button class="pill'+(eraseSize===s[1]?' active':'')+'" style="display:flex;align-items:center;gap:7px;padding:7px 11px;" onclick="setEraseSize('+s[1]+')"><span style="display:inline-block;width:'+d+'px;height:'+d+'px;border-radius:50%;background:#e0607e;"></span>'+s[0]+'</button>'; }).join('');
+  bar.innerHTML='<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:center;"><span style="font-size:12px;color:var(--text-faint);margin-right:2px;">🧽 Eraser size</span>'+btns+'</div>';
+}
+function _eraseCursorEl(){ let c=document.getElementById('eraseCursor'); if(!c){ const stage=document.getElementById('canvasStage'); if(!stage)return null; c=document.createElement('div'); c.id='eraseCursor'; c.style.cssText='position:absolute;border:2px solid rgba(224,96,126,.9);background:rgba(224,96,126,.18);border-radius:50%;pointer-events:none;z-index:8;display:none;transform:translate(-50%,-50%);'; stage.appendChild(c); } return c; }
+function showEraseCursor(ev){ const stage=document.getElementById('canvasStage'); const c=_eraseCursorEl(); if(!c||!stage)return; const r=stage.getBoundingClientRect(); const p=ev.touches?ev.touches[0]:ev; const d=eraseSize*getView().z*2; c.style.width=d+'px'; c.style.height=d+'px'; c.style.left=(p.clientX-r.left)+'px'; c.style.top=(p.clientY-r.top)+'px'; c.style.display='block'; }
+function hideEraseCursor(){ const c=document.getElementById('eraseCursor'); if(c)c.style.display='none'; }
 function eraseOff(){
-  const dl=document.getElementById('drawLayer'), cardLayer=document.getElementById('cardLayer');
+  const dl=document.getElementById('drawLayer'), cardLayer=document.getElementById('cardLayer'), bar=document.getElementById('drawBar');
   if(_eraseHandlers){
     dl.removeEventListener('touchstart',_eraseHandlers.e); dl.removeEventListener('touchmove',_eraseHandlers.e); dl.removeEventListener('touchend',_eraseHandlers.te); dl.removeEventListener('touchcancel',_eraseHandlers.te);
     dl.removeEventListener('mousedown',_eraseHandlers.md); dl.removeEventListener('mousemove',_eraseHandlers.mm); dl.removeEventListener('mouseup',_eraseHandlers.mu);
     _eraseHandlers=null;
   }
   if(_eraseDirty){ save(); _eraseDirty=false; }
+  if(bar) bar.style.display='none';
+  hideEraseCursor();
   dl.style.pointerEvents='none'; dl.style.zIndex='1'; if(cardLayer) cardLayer.style.pointerEvents='auto';
   const pill=document.getElementById('erasePill'); if(pill)pill.classList.remove('active');
 }
@@ -2342,25 +2473,27 @@ function toggleErase(){
   if(eraseMode){ eraseMode=false; eraseOff(); return; }
   if(drawMode) toggleDraw();
   if(connectMode) toggleConnect();
+  if(typeof deselectCard==='function')deselectCard();
   eraseMode=true;
   document.getElementById('erasePill').classList.add('active');
-  const dl=document.getElementById('drawLayer'), cardLayer=document.getElementById('cardLayer');
+  const dl=document.getElementById('drawLayer'), cardLayer=document.getElementById('cardLayer'), bar=document.getElementById('drawBar');
+  if(bar){ renderEraseBar(); bar.style.display='block'; }
   dl.style.pointerEvents='auto'; dl.style.zIndex='5'; dl.style.touchAction='none';
   if(cardLayer) cardLayer.style.pointerEvents='none';
   const pos=e=>{ const r=dl.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; const v=getView(); return {x:(p.clientX-r.left-v.x)/v.z,y:(p.clientY-r.top-v.y)/v.z}; };
-  const doErase=pt=>{ const cv=getCanvas(); if(!cv.strokes||!cv.strokes.length)return; const rad=16/getView().z; let changed=false; const next=[];
+  const doErase=pt=>{ const cv=getCanvas(); if(!cv.strokes||!cv.strokes.length)return; const rad=eraseSize/getView().z; let changed=false; const next=[];
     cv.strokes.forEach(s=>{ const r=_eraseFromStroke(s,pt,rad); if(r.removed){ changed=true; const tool=_strokeTool(s), color=_strokeColor(s); r.segs.forEach(seg=>next.push({pts:seg,tool:tool,color:color})); } else { next.push(s); } });
     if(changed){ cv.strokes=next; redrawStrokes(); _eraseDirty=true; } };
   let md=false;
-  const e=ev=>{ doErase(pos(ev)); ev.preventDefault(); ev.stopPropagation(); };
-  const te=()=>{ if(_eraseDirty){ save(); _eraseDirty=false; } };
-  const mdfn=ev=>{ md=true; doErase(pos(ev)); };
-  const mm=ev=>{ if(md)doErase(pos(ev)); };
-  const mu=()=>{ md=false; if(_eraseDirty){ save(); _eraseDirty=false; } };
+  const e=ev=>{ showEraseCursor(ev); doErase(pos(ev)); ev.preventDefault(); ev.stopPropagation(); };
+  const te=()=>{ hideEraseCursor(); if(_eraseDirty){ save(); _eraseDirty=false; } };
+  const mdfn=ev=>{ md=true; showEraseCursor(ev); doErase(pos(ev)); };
+  const mm=ev=>{ if(md){ showEraseCursor(ev); doErase(pos(ev)); } };
+  const mu=()=>{ md=false; hideEraseCursor(); if(_eraseDirty){ save(); _eraseDirty=false; } };
   dl.addEventListener('touchstart',e,{passive:false}); dl.addEventListener('touchmove',e,{passive:false}); dl.addEventListener('touchend',te); dl.addEventListener('touchcancel',te);
   dl.addEventListener('mousedown',mdfn); dl.addEventListener('mousemove',mm); dl.addEventListener('mouseup',mu);
   _eraseHandlers={e,te,md:mdfn,mm,mu};
-  toast('🧽 Eraser on — rub over part of a drawing to erase it');
+  toast('🧽 Eraser on — pick a size below, then rub to erase');
 }
 
 /* ===== Add menu (Note / Verse / Photo / Shapes / Stickers) ===== */
@@ -2381,8 +2514,8 @@ function openAddMenu(){
 /* ===== Tap a card → smart actions ===== */
 function _findCard(id){ return getCanvas().cards.find(c=>c.id===id); }
 function onCardTap(card){
-  if(card.type==='verse') openVerseCardMenu(card);
-  else if(card.type==='note') openNoteEdit(card);
+  if(selectedId!==card.id){ selectCard(card.id); return; }
+  openEditorFor(card);
 }
 function openNoteEdit(card){
   openSheet('<h3>✏️ Edit note</h3><textarea id="noteEdit" style="min-height:120px;font-family:Caveat,cursive;font-size:19px;">'+esc(card.text||'')+'</textarea><button class="btn btn-gold" onclick="saveNoteEdit(\''+card.id+'\')">Save</button>');
@@ -2463,6 +2596,13 @@ function openBgMenu(){
   openSheet('<h3>🖼️ Canvas background</h3><div style="font-size:13px;color:var(--text-faint);margin:4px 0 12px;">Give your study a place to live.</div>'+rows);
 }
 function setCanvasBg(k){ const cv=getCanvas(); cv.bg=k; save(); applyCanvasBg(); closeSheet(); toast('Background set'); }
+function _exportTf(ctx,card,w,h,draw){
+  const rot=(card.rot||0)*Math.PI/180, sx=(card.sx||0)*Math.PI/180, sy=(card.sy||0)*Math.PI/180, fx=card.fx||1, fy=card.fy||1;
+  if(!rot&&!sx&&!sy&&fx===1&&fy===1){ draw(); return; }
+  const cx=card.x+w/2, cy=card.y+h/2;
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot); ctx.transform(1,Math.tan(sy),Math.tan(sx),1,0,0); ctx.scale(fx,fy); ctx.translate(-cx,-cy);
+  draw(); ctx.restore();
+}
 function _exportBg(ctx,W,H,bg){
   if(bg==='parchment'){ ctx.fillStyle='#efe6cf'; ctx.fillRect(0,0,W,H); ctx.fillStyle='rgba(120,90,40,.10)'; for(let y=7;y<H;y+=14)for(let x=7;x<W;x+=14){ctx.beginPath();ctx.arc(x,y,1,0,7);ctx.fill();} return; }
   if(bg==='night'){ ctx.fillStyle='#0a0a1f'; ctx.fillRect(0,0,W,H); const rg=ctx.createRadialGradient(W*0.2,H*0.25,0,W*0.2,H*0.25,W*0.6); rg.addColorStop(0,'rgba(120,120,255,.18)'); rg.addColorStop(1,'rgba(10,10,31,0)'); ctx.fillStyle=rg; ctx.fillRect(0,0,W,H); ctx.fillStyle='rgba(255,255,255,.7)'; for(let i=0;i<80;i++){ctx.beginPath();ctx.arc(Math.random()*W,Math.random()*H,Math.random()*1.3,0,7);ctx.fill();} return; }
@@ -2509,10 +2649,10 @@ async function doExport(){
   ctx.save(); ctx.translate(-minX, HEAD-minY);
   cv.lines.forEach(ln=>{ const a=cv.cards.find(c=>c.id===ln.from),b=cv.cards.find(c=>c.id===ln.to); if(!a||!b)return; ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--purple-soft'); ctx.lineWidth=2; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(a.x+85,a.y+40); ctx.lineTo(b.x+85,b.y+40); ctx.stroke(); ctx.setLineDash([]); });
   (cv.strokes||[]).forEach(s=>{ _paintStroke(ctx,_strokePts(s),_strokeColor(s),_strokeTool(s)); });
-  loaded.forEach(o=>{ if(!o)return; const c=o.card; try{ ctx.drawImage(o.im,c.x,c.y,c.w||120,c.h||120); }catch(_){} });
+  loaded.forEach(o=>{ if(!o)return; const c=o.card; const w=c.w||120,h=c.h||120; _exportTf(ctx,c,w,h,()=>{ try{ ctx.drawImage(o.im,c.x,c.y,w,h); }catch(_){} }); });
   const txt=getComputedStyle(document.body).getPropertyValue('--text');
-  cv.cards.forEach(card=>{ if(card.type!=='note'&&card.type!=='verse')return; ctx.fillStyle=getComputedStyle(document.body).getPropertyValue(card.type==='verse'?'--surface2':'--surface'); const w=card.w||170; roundRect(ctx,card.x,card.y,w,80,12); ctx.fill(); ctx.fillStyle=txt; ctx.font='12px Lexend'; ctx.textBaseline='alphabetic'; wrapText(ctx,(card.ref?card.ref+': ':'')+(card.text||''),card.x+10,card.y+22,w-20,16); });
-  cv.cards.forEach(card=>{ if(card.type!=='sticker')return; const s=card.size||80; ctx.font=Math.round(s*0.8)+'px serif'; ctx.textBaseline='middle'; ctx.textAlign='center'; ctx.fillText(card.glyph||'⭐',card.x+s/2,card.y+s/2); ctx.textAlign='left'; });
+  cv.cards.forEach(card=>{ if(card.type!=='note'&&card.type!=='verse')return; const w=card.w||170; _exportTf(ctx,card,w,84,()=>{ ctx.fillStyle=getComputedStyle(document.body).getPropertyValue(card.type==='verse'?'--surface2':'--surface'); roundRect(ctx,card.x,card.y,w,80,12); ctx.fill(); ctx.fillStyle=txt; ctx.font='12px Lexend'; ctx.textBaseline='alphabetic'; wrapText(ctx,(card.ref?card.ref+': ':'')+(card.text||''),card.x+10,card.y+22,w-20,16); }); });
+  cv.cards.forEach(card=>{ if(card.type!=='sticker')return; const s=card.size||80; _exportTf(ctx,card,s,s,()=>{ ctx.font=Math.round(s*0.8)+'px serif'; ctx.textBaseline='middle'; ctx.textAlign='center'; ctx.fillText(card.glyph||'⭐',card.x+s/2,card.y+s/2); ctx.textAlign='left'; }); });
   ctx.restore();
   // footer
   ctx.fillStyle='rgba(240,230,207,.6)'; ctx.font='11px Lexend'; ctx.textBaseline='middle'; ctx.textAlign='center';
@@ -2546,7 +2686,7 @@ function addImageCard(src,ar){
   const card={id:'cd'+Date.now(),type:'image',src:src,x:30+Math.random()*40,y:30+Math.random()*40,w:w,h:h,bw:0,bc:'transparent'};
   cv.cards.push(card);
   try{ save(); }catch(err){ cv.cards.pop(); toast('That photo is too large to save'); return; }
-  renderCanvas(); toast('Photo added 📷');
+  renderCanvas(); selectLast(); toast('Photo added 📷');
 }
 
 /* ===== Shapes (basic + faith) + borders ===== */
@@ -2586,7 +2726,7 @@ function openShapePalette(group){
 }
 function setShapeColor(c){ _shapeColor=c; openShapePalette(_lastShapeGroup); }
 function toggleShapeFill(){ _shapeFill=!_shapeFill; openShapePalette(_lastShapeGroup); }
-function addShape(shape){ const cv=getCanvas(); cv.cards.push({id:'cd'+Date.now(),type:'shape',shape:shape,color:_shapeColor,filled:_shapeFill,x:40+Math.random()*40,y:40+Math.random()*40,w:120,h:120}); save(); closeSheet(); renderCanvas(); toast('Shape added'); }
+function addShape(shape){ const cv=getCanvas(); cv.cards.push({id:'cd'+Date.now(),type:'shape',shape:shape,color:_shapeColor,filled:_shapeFill,x:40+Math.random()*40,y:40+Math.random()*40,w:120,h:120}); save(); closeSheet(); renderCanvas(); selectLast(); toast('Shape added — pinch to size'); }
 
 /* ===== Stickers ===== */
 const STICKERS=['✝️','🕊️','🙏','❤️','⭐','🔥','👑','📖','🕯️','🌿','💧','☀️','✨','🍞','🐟','🐑','🙌','😇','🌟','💛'];
@@ -2594,7 +2734,7 @@ function openStickerPalette(){
   const grid=STICKERS.map(g=>'<div class="card tap" style="padding:10px;text-align:center;font-size:30px;" onclick="addSticker(\''+g+'\')">'+g+'</div>').join('');
   openSheet('<h3>😀 Stickers</h3><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px;">'+grid+'</div>');
 }
-function addSticker(g){ const cv=getCanvas(); cv.cards.push({id:'cd'+Date.now(),type:'sticker',glyph:g,x:50+Math.random()*40,y:50+Math.random()*40,size:80}); save(); closeSheet(); renderCanvas(); toast('Sticker added'); }
+function addSticker(g){ const cv=getCanvas(); cv.cards.push({id:'cd'+Date.now(),type:'sticker',glyph:g,x:50+Math.random()*40,y:50+Math.random()*40,size:80}); save(); closeSheet(); renderCanvas(); selectLast(); toast('Sticker added — pinch to size'); }
 function addTextCard(){
   openSheet(`<h3>＋ Add Note</h3><textarea id="noteText" placeholder="Type your thought…" style="min-height:120px;font-family:Caveat,cursive;font-size:19px;"></textarea><button class="btn btn-gold" onclick="confirmTextCard()">Add to Canvas</button>`);
 }
@@ -2611,12 +2751,19 @@ async function confirmVerseCard(){
 function addVerseToCanvas(vid){ const cv=getCanvas(); cv.cards.push({id:'cd'+Date.now(),type:'verse',ref:vid,text:_pendingVerseText,x:30+Math.random()*60,y:30+Math.random()*60}); save(); closeSheet(); toast('Added to Canvas 🎨'); }
 function deleteCard(id){ const cv=getCanvas(); cv.cards=cv.cards.filter(c=>c.id!==id); cv.lines=cv.lines.filter(l=>l.from!==id&&l.to!==id); save(); renderCanvas(); }
 function openCanvasMenu(){
-  let html=`<h3>🎨 Canvases</h3><button class="btn btn-primary" style="margin:14px 0;" onclick="newCanvas()">＋ New Canvas</button>`;
+  let html=`<h3>🎨 My Canvases</h3>
+  <div style="display:flex;gap:8px;margin:12px 0 16px;">
+    <button class="btn btn-primary" style="margin:0;flex:1;" onclick="newCanvas()">＋ Blank</button>
+    <button class="btn btn-gold" style="margin:0;flex:1;" onclick="closeSheet();openTemplateMenu()">📋 Template</button>
+  </div>`;
   state.canvases.forEach(cv=>{
-    html+=`<div class="card" style="margin-bottom:10px;${cv.id===state.activeCanvas?'border-color:var(--purple-soft);':''}">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div onclick="switchCanvas('${cv.id}')" style="flex:1;cursor:pointer;"><div style="font-weight:700;">${esc(cv.name)}</div><div style="font-size:12px;color:var(--text-faint);">${cv.cards.length} cards</div></div>
-        <div style="display:flex;gap:6px;"><button class="iconbtn" style="width:34px;height:34px;font-size:14px;" onclick="renameCanvas('${cv.id}')">✎</button><button class="iconbtn" style="width:34px;height:34px;font-size:14px;color:#e0607e;" onclick="deleteCanvas('${cv.id}')">🗑</button></div>
+    const active=cv.id===state.activeCanvas;
+    html+=`<div class="card" style="margin-bottom:10px;${active?'border-color:var(--purple-soft);':''}">
+      <div onclick="switchCanvas('${cv.id}')" style="cursor:pointer;"><div style="font-weight:700;">${esc(cv.name)}${active?' <span style="font-size:11px;color:var(--purple-soft);">• current</span>':''}</div><div style="font-size:12px;color:var(--text-faint);">${cv.cards.length} items</div></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" style="margin:0;flex:1;" onclick="renameCanvas('${cv.id}')">✎ Rename</button>
+        ${active?`<button class="btn btn-ghost btn-sm" style="margin:0;flex:1;" onclick="clearCanvas('${cv.id}')">🧹 Clear</button>`:''}
+        <button class="btn btn-ghost btn-sm" style="margin:0;flex:1;color:#e0607e;" onclick="deleteCanvas('${cv.id}')">🗑 Delete</button>
       </div></div>`;
   });
   openSheet(html);
@@ -2624,7 +2771,15 @@ function openCanvasMenu(){
 function newCanvas(){ const n=prompt('Canvas name:','Untitled Canvas'); if(n===null)return; const c={id:'c'+Date.now(),name:n||'Untitled',cards:[],lines:[],strokes:[]}; state.canvases.push(c); state.activeCanvas=c.id; save(); closeSheet(); initCanvas(); }
 function switchCanvas(id){ state.activeCanvas=id; save(); closeSheet(); initCanvas(); }
 function renameCanvas(id){ const cv=state.canvases.find(c=>c.id===id); const n=prompt('Rename:',cv.name); if(n){cv.name=n;save();openCanvasMenu();initCanvas();} }
-function deleteCanvas(id){ if(state.canvases.length<=1){toast('Keep at least one canvas');return;} if(!confirm('Delete this canvas?'))return; state.canvases=state.canvases.filter(c=>c.id!==id); if(state.activeCanvas===id)state.activeCanvas=state.canvases[0].id; save(); closeSheet(); initCanvas(); }
+function clearCanvas(id){ const cv=state.canvases.find(c=>c.id===id); if(!cv)return; if(!confirm('Clear everything on “'+cv.name+'”? The canvas stays, but all notes, drawings and items are removed.'))return; cv.cards=[]; cv.lines=[]; cv.strokes=[]; cv.view={x:0,y:0,z:1}; save(); closeSheet(); initCanvas(); toast('Canvas cleared'); }
+function deleteCanvas(id){
+  const cv=state.canvases.find(c=>c.id===id); if(!cv)return;
+  if(!confirm('Delete “'+cv.name+'” and everything on it?'))return;
+  if(state.canvases.length<=1){ cv.cards=[]; cv.lines=[]; cv.strokes=[]; cv.view={x:0,y:0,z:1}; cv.name='My Canvas'; save(); closeSheet(); initCanvas(); toast('Canvas cleared'); return; }
+  state.canvases=state.canvases.filter(c=>c.id!==id);
+  if(state.activeCanvas===id)state.activeCanvas=state.canvases[0].id;
+  save(); closeSheet(); initCanvas(); toast('Canvas deleted');
+}
 
 /* ===== Receive highlighted text from the Visual Bible (iframe) ===== */
 var _fwPending=null, _fwReturn='';
@@ -3194,14 +3349,30 @@ function renderHighlights(){
 function renderMyData(){
   return `
   <div class="card"><div style="font-weight:700;margin-bottom:6px;">📦 Your Data</div><div style="font-size:14px;color:var(--text-dim);line-height:1.7;">Everything in FocusWord — your journal, bookmarks, highlights, canvases, and streak — is stored privately on <b>this device only</b>. Nothing is sent to any server.</div></div>
+  <div class="card" style="border-color:var(--teal);"><div style="font-size:13.5px;color:var(--text-dim);line-height:1.7;">✅ Updating the app won't erase anything — your data is tied to the website, not the file. But it's wise to tap <b>Export</b> before a big update (Safari can clear storage), then keep the file in your Files or iCloud.</div></div>
   <button class="btn btn-teal" onclick="exportData()">⬇ Export My Data (backup)</button>
-  <button class="btn btn-ghost" style="margin-top:12px;" onclick="importData()">⬆ Import Data</button>
+  <button class="btn btn-ghost" style="margin-top:12px;" onclick="importData()">⬆ Import / Restore Data</button>
   <button class="btn btn-ghost" style="margin-top:12px;color:#e0607e;" onclick="wipeData()">🗑 Erase Everything</button>
   <input type="file" id="importFile" accept=".json" style="display:none;" onchange="doImport(event)">`;
 }
-function exportData(){ const data={}; ['theme','trans','streak','chapters','bookmarks','highlights','highlightText','journal','canvases','planProgress','readHistory'].forEach(k=>data[k]=state[k]); const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='focusword-backup.json'; a.click(); toast('Backup saved!'); }
+function exportData(){
+  const data={};
+  ['theme','trans','fmt','streak','lastRead','chapters','bookmarks','highlights','highlightText','journal','canvases','activeCanvas','planProgress','readHistory'].forEach(k=>{ if(state[k]!==undefined) data[k]=state[k]; });
+  try{ const t=localStorage.getItem('fw_textHL'); if(t!=null) data.fw_textHL=t; }catch(_){}
+  data._fwBackup=1; data._date=new Date().toISOString();
+  const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+  a.download='focusword-backup-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  toast('Backup saved! 📦');
+}
 function importData(){ document.getElementById('importFile').click(); }
-function doImport(e){ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); Object.assign(state,d); save(); toast('Data imported!'); go('home'); }catch(err){ toast('Invalid file'); } }; r.readAsText(f); }
+function doImport(e){ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result);
+  if(d.fw_textHL!=null){ try{ localStorage.setItem('fw_textHL', d.fw_textHL); }catch(_){} }
+  delete d.fw_textHL; delete d._fwBackup; delete d._date;
+  Object.assign(state,d); save();
+  var wf=document.getElementById('wallFrame'); if(wf) wf.src='';
+  toast('Data restored! 📦'); go('home');
+  }catch(err){ toast('Invalid file'); } }; r.readAsText(f); }
 function wipeData(){ if(!confirm('Erase ALL your data? This cannot be undone.'))return; if(!confirm('Are you absolutely sure?'))return; localStorage.clear(); location.reload(); }
 </script>
 <script>
