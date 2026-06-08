@@ -4995,7 +4995,7 @@ function ChapterReader({
     });
     setHl(loadHLAll()[refKey] || []);
     const ref = encodeURIComponent(refKey);
-    fetch(`https://bible-api.com/${ref}?translation=kjv`).then(r => {
+    fetch(`https://bible-api.com/${ref}?translation=web`).then(r => {
       if (!r.ok) throw new Error("Couldn't load this chapter.");
       return r.json();
     }).then(d => {

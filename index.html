@@ -330,7 +330,7 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
         <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(8,6,16,.20) 0%, rgba(8,6,16,.55) 55%, rgba(6,5,12,.92) 100%);"></div>
         <div style="position:relative;padding:16px 18px;width:100%;">
           <div style="font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;">✦ The Sacred Wall</div>
-          <div style="font-size:25px;font-weight:800;margin-top:4px;font-family:Georgia,'Times New Roman',serif;color:#fff;">Read the Bible</div>
+          <div style="font-size:25px;font-weight:800;margin-top:4px;font-family:Georgia,'Times New Roman',serif;color:#fff;">See the Bible</div>
           <div style="font-size:13px;color:#e9e3d2;margin-top:4px;">Walk through all 66 books — tap any to read →</div>
         </div>
       </div>
@@ -501,6 +501,7 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
   <nav class="tabbar">
     <button class="tab active" data-tab="home" onclick="goTab('home')"><span class="ti" data-ic="home"></span>Home</button>
     <button class="tab" data-tab="read" onclick="goTab('read')"><span class="ti" data-ic="read"></span>Read</button>
+    <button class="tab" data-tab="see" onclick="goTab('wall')"><span class="ti" data-ic="explore"></span>See</button>
     <button class="tab" data-tab="pray" onclick="goTab('pray')"><span class="ti" data-ic="pray"></span>Pray</button>
     <button class="tab" data-tab="canvas" onclick="goTab('canvas')"><span class="ti" data-ic="canvas"></span>Canvas</button>
     <button class="tab" data-tab="more" onclick="goTab('more')"><span class="ti" data-ic="more"></span>More</button>
@@ -670,7 +671,8 @@ function go(tab, isBack){
   } else if(tab==='wall'){
     if(typeof hideReturnPill==='function') hideReturnPill();
     document.getElementById('screen-wall').classList.add('active');
-    document.querySelector('.tab[data-tab="home"]').classList.add('active');
+    var seeTab=document.querySelector('.tab[data-tab="see"]')||document.querySelector('.tab[data-tab="home"]');
+    if(seeTab) seeTab.classList.add('active');
     var wf=document.getElementById('wallFrame'); if(wf && !wf.src) wf.src='wall.html?t='+Date.now();
   } else {
     // sub screen
