@@ -478,7 +478,7 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
   <!-- ============ SUB SCREENS (loaded into #subScreen) ============ -->
   <div class="screen" id="screen-sub">
     <div class="topbar">
-      <button class="iconbtn" onclick="go('more')" data-ic="back"></button>
+      <button class="iconbtn" onclick="goBack()" data-ic="back"></button>
       <h1 style="font-size:18px;" id="subTitle">Section</h1>
       <div style="width:42px;"></div>
     </div>
@@ -488,7 +488,7 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
 <!-- ============ FOCUSWORD BIBLE WALL ============ -->
   <div class="screen" id="screen-wall">
     <div class="topbar">
-      <button class="iconbtn" onclick="go('home')" data-ic="back"></button>
+      <button class="iconbtn" onclick="goBack()" data-ic="back"></button>
       <h1 style="font-size:18px;">📖 Bible Wall</h1>
       <div style="width:42px;"></div>
     </div>
@@ -499,11 +499,11 @@ label{font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-
 
   <!-- ============ TAB BAR ============ -->
   <nav class="tabbar">
-    <button class="tab active" data-tab="home" onclick="go('home')"><span class="ti" data-ic="home"></span>Home</button>
-    <button class="tab" data-tab="read" onclick="go('read')"><span class="ti" data-ic="read"></span>Read</button>
-    <button class="tab" data-tab="pray" onclick="go('pray')"><span class="ti" data-ic="pray"></span>Pray</button>
-    <button class="tab" data-tab="canvas" onclick="go('canvas')"><span class="ti" data-ic="canvas"></span>Canvas</button>
-    <button class="tab" data-tab="more" onclick="go('more')"><span class="ti" data-ic="more"></span>More</button>
+    <button class="tab active" data-tab="home" onclick="goTab('home')"><span class="ti" data-ic="home"></span>Home</button>
+    <button class="tab" data-tab="read" onclick="goTab('read')"><span class="ti" data-ic="read"></span>Read</button>
+    <button class="tab" data-tab="pray" onclick="goTab('pray')"><span class="ti" data-ic="pray"></span>Pray</button>
+    <button class="tab" data-tab="canvas" onclick="goTab('canvas')"><span class="ti" data-ic="canvas"></span>Canvas</button>
+    <button class="tab" data-tab="more" onclick="goTab('more')"><span class="ti" data-ic="more"></span>More</button>
   </nav>
 </div>
 
@@ -652,7 +652,11 @@ function closeSheet(){ document.getElementById('sheetOverlay').classList.remove(
 function setTheme(t){ state.theme=t; document.body.setAttribute('data-theme',t); document.querySelector('meta[name=theme-color]').setAttribute('content', getComputedStyle(document.body).getPropertyValue('--bg').trim()); save(); }
 
 /* ============ NAVIGATION ============ */
-function go(tab){
+let _navStack=[]; let _curScreen='home';
+function goTab(tab){ _navStack=[]; go(tab); }
+function goBack(){ const prev=_navStack.pop(); go(prev||'home', true); }
+function go(tab, isBack){
+  if(!isBack && tab!==_curScreen){ _navStack.push(_curScreen); if(_navStack.length>30)_navStack.shift(); }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if(['home','read','pray','canvas','more'].includes(tab)){
@@ -675,6 +679,7 @@ function go(tab){
     renderSub(tab);
   }
   const act=document.querySelector('.screen.active'); if(act) act.scrollTop=0;
+  _curScreen=tab;
 }
 
 /* ============ STREAK LOGIC ============ */
